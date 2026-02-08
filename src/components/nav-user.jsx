@@ -22,7 +22,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { supabase } from "../supabase-client";
+import { supabase } from "@/lib/supabase-client";
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
 

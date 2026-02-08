@@ -1,6 +1,6 @@
 // src/pages/auth/SignUp.jsx
 import { useState } from "react";
-import { supabase } from "../../supabase-client";
+import { supabase } from "@/lib/supabase-client";
 import { useNavigate } from "react-router";
 
 export default function SignUp() {

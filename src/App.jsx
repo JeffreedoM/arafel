@@ -17,6 +17,8 @@ function App() {
   return (
     <Routes>
       {/* Root redirect */}
+      <Route path="/admin" element={<Navigate to="/login" replace />} />
+
       <Route
         path="/login"
         element={user ? <Navigate to="/dashboard" replace /> : <Login />}

@@ -1,6 +1,5 @@
 // src/pages/auth/Login.jsx
 import { useState } from "react";
-import { supabase } from "../../supabase-client";
 import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +16,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase-client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
