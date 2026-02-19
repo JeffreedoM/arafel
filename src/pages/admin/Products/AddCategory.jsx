@@ -1,7 +1,6 @@
 // forms
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { productDefaultValues, productZodSchema } from "./productZodSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 // shadcn
@@ -39,10 +38,16 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-client";
 
-export default function AddCategory() {
+export default function AddCategory({
+  categories,
+  onSelectCategory,
+  selectedCategory,
+  setCategories,
+  error,
+}) {
   const {
     register,
     handleSubmit,
@@ -59,19 +64,54 @@ export default function AddCategory() {
   const [openCategories, setOpenCategories] = useState(false);
   const [openAddCategory, setOpenAddCategory] = useState(false);
 
-  const submitCategory = async (data) => {
-    const { categoryName } = data;
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from("product_categories")
+      .select("*")
+      .order("category_name");
 
+    if (error) {
+      console.error("Fetch categories error:", error);
+      return [];
+    }
+
+    return data;
+  };
+
+  const submitCategory = async (data) => {
+    const ucwords = (str) =>
+      str
+        .toLowerCase()
+        .trim()
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
+    const formattedName = ucwords(data.categoryName);
+
+    // 🔍 check if category already exists (case-insensitive)
+    const { data: existingCategory, error: fetchError } = await supabase
+      .from("product_categories")
+      .select("id")
+      .ilike("category_name", formattedName)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Error checking category:", fetchError.message);
+      return;
+    }
+
+    if (existingCategory) {
+      alert("Category already exists");
+      return;
+    }
+
+    // ➕ insert new category
     const { data: insertedCategory, error } = await supabase
       .from("product_categories")
-      .insert([
-        {
-          category_name: categoryName,
-        },
-      ])
+      .insert({
+        category_name: formattedName,
+      })
       .select()
       .single();
-    setOpenAddCategory(false);
 
     if (error) {
       console.error("Error adding category:", error.message);
@@ -79,17 +119,29 @@ export default function AddCategory() {
     }
 
     console.log("Category added:", insertedCategory);
+    setOpenAddCategory(false);
+    fetchCategories().then(setCategories);
   };
 
   return (
     <Field className="flex flex-col gap-4">
+      <FieldLabel>Product Category</FieldLabel>
       <Button
         onClick={() => setOpenCategories(true)}
         variant="outline"
+        type="button"
         className="w-fit cursor-pointer"
       >
-        Select Product Category
+        {selectedCategory
+          ? categories.find((cat) => cat.id === selectedCategory)?.category_name
+          : "Select Category"}
       </Button>
+      {error && (
+        <span className="-mt-1 text-sm font-semibold text-red-500">
+          {error.message}
+        </span>
+      )}
+
       <CommandDialog open={openCategories} onOpenChange={setOpenCategories}>
         <Command>
           <CommandInput placeholder="Type a category name or add a new category" />
@@ -99,7 +151,7 @@ export default function AddCategory() {
             {/* Add Category */}
 
             <Dialog open={openAddCategory} onOpenChange={setOpenAddCategory}>
-              <DialogTrigger className="hover:bg-accent hover:text-accent-foreground mx-1 my-1 w-full cursor-pointer rounded-md p-2 text-sm">
+              <DialogTrigger className="hover:bg-accent hover:text-accent-foreground mx-1 my-1 w-full cursor-pointer rounded-md p-3 pb-4 text-sm underline underline-offset-8">
                 Add New Category
               </DialogTrigger>
               <form>
@@ -141,9 +193,18 @@ export default function AddCategory() {
             {/* End of Add Category */}
 
             <CommandGroup heading="Categories">
-              <CommandItem>Calendar</CommandItem>
-              <CommandItem>Search Emoji</CommandItem>
-              <CommandItem>Calculator</CommandItem>
+              {categories.map((category) => (
+                <CommandItem
+                  key={category.id}
+                  onSelect={() => {
+                    console.log("Selected category:", category);
+                    onSelectCategory(category.id);
+                    setOpenCategories(false);
+                  }}
+                >
+                  {category.category_name}
+                </CommandItem>
+              ))}
             </CommandGroup>
           </CommandList>
         </Command>

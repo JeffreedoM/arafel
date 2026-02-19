@@ -8,6 +8,8 @@ import { useAuth } from "./contexts/AuthContext";
 import NotFound from "./pages/public/NotFound";
 import Products from "./pages/admin/Products/Products";
 import CreateProduct from "./pages/admin/Products/CreateProduct";
+import ProductDetails from "./pages/admin/Products/ProductDetails";
+import EditProduct from "./pages/admin/Products/EditProduct";
 
 function App() {
   const { user, loading } = useAuth();
@@ -36,8 +38,8 @@ function App() {
           <Route path="products">
             <Route index element={<Products />} />
             <Route path="create" element={<CreateProduct />} />
-            {/* <Route path=":id/edit" element={<EditProduct />} />
-            <Route path=":id" element={<ProductDetails />} /> */}
+            <Route path=":id/edit" element={<EditProduct />} />
+            <Route path=":id" element={<ProductDetails />} />
           </Route>
         </Route>
       </Route>

@@ -4,35 +4,54 @@ import { columns } from "./columns";
 import { DataTable } from "./products-table";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router";
+import { supabase } from "@/lib/supabase-client";
+import { useEffect, useState } from "react";
+
+import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Products() {
-  function getData() {
-    // Fetch data from your API here.
-    return [
-      {
-        id: "b3f1c2a9-8d4e-4a91-9f3d-21a8c9e0a111",
-        created_by: "2f9c4e88-1a2d-4e6a-9b21-88d3f41c7abc",
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-        name: "Full-Zip Hoodie",
-        description:
-          "Soft cotton hoodie with a relaxed fit. Perfect for everyday wear or chilly nights.",
+  const fetchProducts = async () => {
+    setLoading(true);
 
-        category_id: "c1a2b3d4-men",
-        price: 1499,
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        `
+      *,
+      product_categories (
+        id,
+        category_name
+      )
+    `,
+      )
+      .order("created_at", { ascending: false });
 
-        stock: 100,
-        status: "active",
-        is_featured: true,
+    if (error) {
+      console.error("Fetch products error:", error);
+      setLoading(false);
+      return;
+    }
 
-        created_at: "2026-02-04T10:15:30.000Z",
-        updated_at: "2026-02-04T10:15:30.000Z",
-      },
+    setData(data);
+    setLoading(false);
+  };
 
-      // ...
-    ];
-  }
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-  const data = getData();
+  console.log("Products data:", data);
 
   return (
     <>
@@ -45,7 +64,12 @@ export default function Products() {
                 <Button className="cursor-pointer">Create Product</Button>
               </Link>
             </div>
-            <DataTable columns={columns} data={data} />
+
+            {loading ? (
+              <p className="text-muted-foreground text-sm">Loading products…</p>
+            ) : (
+              <DataTable columns={columns} data={data} />
+            )}
           </div>
         </div>
       </div>
