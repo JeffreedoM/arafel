@@ -50,6 +50,11 @@ const data = {
       icon: IconBox,
     },
     {
+      title: "Page Builder",
+      url: "/page-builder",
+      icon: IconListDetails,
+    },
+    {
       title: "Team",
       url: "#",
       icon: IconUsers,
@@ -156,8 +161,8 @@ export function AppSidebar({ ...props }) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {/* <NavDocuments items={data.documents} /> */}
+        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

@@ -10,6 +10,7 @@ import Products from "./pages/admin/Products/Products";
 import CreateProduct from "./pages/admin/Products/CreateProduct";
 import ProductDetails from "./pages/admin/Products/ProductDetails";
 import EditProduct from "./pages/admin/Products/EditProduct";
+import PageBuilder from "./pages/admin/PageBuilder/PageBuilder";
 
 function App() {
   const { user, loading } = useAuth();
@@ -40,6 +41,13 @@ function App() {
             <Route path="create" element={<CreateProduct />} />
             <Route path=":id/edit" element={<EditProduct />} />
             <Route path=":id" element={<ProductDetails />} />
+          </Route>
+
+          <Route path="page-builder">
+            <Route index element={<PageBuilder />} />
+            {/* <Route path="create" element={<CreateProduct />} />
+            <Route path=":id/edit" element={<EditProduct />} />
+            <Route path=":id" element={<ProductDetails />} /> */}
           </Route>
         </Route>
       </Route>
