@@ -11,6 +11,7 @@ import CreateProduct from "./pages/admin/Products/CreateProduct";
 import ProductDetails from "./pages/admin/Products/ProductDetails";
 import EditProduct from "./pages/admin/Products/EditProduct";
 import PageBuilder from "./pages/admin/PageBuilder/PageBuilder";
+import Home from "./pages/public/Home/Home";
 
 function App() {
   const { user, loading } = useAuth();
@@ -30,6 +31,7 @@ function App() {
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/" element={<Home />} />
 
       {/* Protected dashboard */}
       <Route element={<ProtectedRoute />}>
