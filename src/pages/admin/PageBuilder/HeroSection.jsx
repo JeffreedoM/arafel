@@ -124,7 +124,7 @@ export default function HeroSection() {
       <Accordion.Item value="hero-section" className="rounded-md">
         <div className="bg-accent flex items-center justify-between px-6 py-3">
           <h2 className="text-lg font-semibold">Hero Section</h2>
-          <Accordion.Trigger className="transition-transform duration-300 data-[state=open]:rotate-180">
+          <Accordion.Trigger className="cursor-pointer transition-transform duration-300 data-[state=open]:rotate-180">
             <ChevronDown className="transform" aria-hidden />
           </Accordion.Trigger>
         </div>

@@ -8,7 +8,7 @@ export default function PageBuilder() {
       <SiteHeader title="Page Builder" />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="container mx-auto py-10 flex flex-col gap-10">
+          <div className="container mx-auto flex flex-col gap-2 px-4 py-10">
             <HeroSection />
             <BannerSection />
           </div>
