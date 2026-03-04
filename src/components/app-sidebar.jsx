@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   IconBox,
   IconCamera,
+  IconCategory,
   IconChartBar,
   IconDashboard,
   IconDatabase,
@@ -18,7 +19,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 
-import { NavDocuments } from "@/components/nav-documents";
+import { NavProducts } from "@/components/nav-products";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
@@ -31,6 +32,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Icon } from "lucide-react";
 
 const data = {
   user: {
@@ -44,11 +46,11 @@ const data = {
       url: "/dashboard",
       icon: IconDashboard,
     },
-    {
-      title: "Products",
-      url: "/products",
-      icon: IconBox,
-    },
+    // {
+    //   title: "Products",
+    //   url: "/products",
+    //   icon: IconBox,
+    // },
     {
       title: "Page Builder",
       url: "/page-builder",
@@ -120,21 +122,21 @@ const data = {
       icon: IconHelp,
     },
   ],
-  documents: [
+  products: [
     {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
+      title: "All Products",
+      url: "/products",
+      icon: IconBox,
     },
     {
-      name: "Reports",
+      title: "Categories",
       url: "#",
+      icon: IconCategory,
+    },
+    {
+      title: "Campaigns",
+      url: "/campaigns",
       icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
     },
   ],
 };
@@ -161,7 +163,7 @@ export function AppSidebar({ ...props }) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        {/* <NavDocuments items={data.documents} /> */}
+        <NavProducts items={data.products} />
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>

@@ -12,6 +12,8 @@ import ProductDetails from "./pages/admin/Products/ProductDetails";
 import EditProduct from "./pages/admin/Products/EditProduct";
 import PageBuilder from "./pages/admin/PageBuilder/PageBuilder";
 import Home from "./pages/public/Home/Home";
+import Campaign from "./pages/admin/Campaigns/Campaign";
+import NewCampaign from "./pages/admin/Campaigns/NewCampaign";
 
 function App() {
   const { user, loading } = useAuth();
@@ -43,6 +45,13 @@ function App() {
             <Route path="create" element={<CreateProduct />} />
             <Route path=":id/edit" element={<EditProduct />} />
             <Route path=":id" element={<ProductDetails />} />
+          </Route>
+
+          <Route path="campaigns">
+            <Route index element={<Campaign />} />
+            <Route path="new" element={<NewCampaign />} />
+            {/* <Route path=":id/edit" element={<EditProduct />} />
+            <Route path=":id" element={<ProductDetails />} /> */}
           </Route>
 
           <Route path="page-builder">

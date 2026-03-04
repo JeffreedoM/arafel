@@ -123,7 +123,7 @@ export default function HeroSection() {
     >
       <Accordion.Item value="hero-section" className="rounded-md">
         <div className="bg-accent flex items-center justify-between px-6 py-3">
-          <h2 className="text-lg font-semibold">Hero Section</h2>
+          <h2 className="text-lg font-semibold">Main Banner (Top of Page)</h2>
           <Accordion.Trigger className="cursor-pointer transition-transform duration-300 data-[state=open]:rotate-180">
             <ChevronDown className="transform" aria-hidden />
           </Accordion.Trigger>
@@ -132,13 +132,13 @@ export default function HeroSection() {
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
             <FieldGroup className="max-w-xl px-6 pt-4 pb-10">
               <Field>
-                <FieldLabel htmlFor="hero_title">Hero Title</FieldLabel>
+                <FieldLabel htmlFor="hero_title">Title</FieldLabel>
                 <Input
                   id="hero_title"
                   {...register("hero_title")}
                   placeholder="Enter hero title"
                 />
-                <FieldDescription>Title of the hero section.</FieldDescription>
+                <FieldDescription>Title of the banner.</FieldDescription>
               </Field>
 
               <Field>
@@ -151,7 +151,7 @@ export default function HeroSection() {
                   placeholder="Enter page description or tagline"
                 />
                 <FieldDescription>
-                  Description or tagline for the page.
+                  Description or tagline for the banner.
                 </FieldDescription>
               </Field>
 
