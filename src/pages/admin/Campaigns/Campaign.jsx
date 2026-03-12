@@ -67,12 +67,30 @@ export default function Campaign() {
                     key={campaign.id}
                     className="block h-50 w-56 transition-transform hover:scale-102"
                   >
-                    <Card className="h-full w-full cursor-pointer">
+                    <Card className="flex h-full w-full cursor-pointer justify-between">
                       <CardHeader>
                         <CardTitle>{campaign.campaign_name}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p>{campaign.description}</p>
+                        <p className="text-muted-foreground text-sm">
+                          {new Date(campaign.date_start).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}{" "}
+                          -{" "}
+                          {new Date(campaign.date_end).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
+                        </p>
                       </CardContent>
                     </Card>
                   </Link>

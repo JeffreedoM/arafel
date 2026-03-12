@@ -3,7 +3,8 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 
 import { supabase } from "@/lib/supabase-client.js";
-import { is } from "zod/locales";
+import { ca, is } from "zod/locales";
+import { Link } from "react-router";
 
 export default function Home() {
   const products = [
@@ -35,29 +36,55 @@ export default function Home() {
 
   const [heroData, setHeroData] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from("pages")
-      .select("*")
-      .eq("slug", "home")
-      .single();
-
-    if (error) {
-      console.error(error);
-    } else {
-      console.log(data);
-    }
-
-    setHeroData(data);
-    setLoading(false);
-  };
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("pages")
+        .select("*")
+        .eq("slug", "home")
+        .single();
+
+      if (error) {
+        console.error(error);
+      } else {
+        console.log(data);
+      }
+
+      setHeroData(data);
+      setLoading(false);
+    };
+
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase
+        .from("product_categories")
+        .select("*");
+
+      if (error) {
+        console.error(error);
+      } else {
+        console.log(data);
+        setCategories(data);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const colors = [
+    "bg-teal-100",
+    "bg-red-100",
+    "bg-blue-100",
+    "bg-yellow-100",
+    "bg-purple-100",
+  ];
 
   if (loading) {
     return (
@@ -98,16 +125,26 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CAtegories */}
+        {/* Categories */}
         <section className="mt-20">
           <h3 className="text-lg font-bold">Our Product Categories</h3>
 
           <div className="mt-6 flex flex-wrap items-center justify-start gap-6 gap-y-2">
-            <div className="w-[220px] items-center rounded-lg bg-teal-100 p-2 py-1.5 tracking-wide transition-transform hover:scale-105">
-              <p className="text-primary-background grow text-center text-sm font-semibold">
-                For Birthdays
-              </p>
-            </div>
+            {categories.map((category, index) => {
+              const colorClass = colors[index % colors.length];
+
+              return (
+                <Link
+                  to="#"
+                  key={category.id}
+                  className={`w-[220px] cursor-pointer items-center rounded-lg ${colorClass} p-2 py-1.5 tracking-wide transition-transform hover:scale-105`}
+                >
+                  <p className="text-primary-background grow text-center text-sm font-semibold">
+                    {category.category_name}
+                  </p>
+                </Link>
+              );
+            })}
           </div>
         </section>
 

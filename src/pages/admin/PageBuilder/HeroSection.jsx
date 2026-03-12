@@ -185,6 +185,8 @@ export default function HeroSection() {
                   Upload a new hero image (leave empty to keep current)
                 </FieldDescription>
               </Field>
+
+              
             </FieldGroup>
             <Button type="submit" className="mt-4 ml-auto" disabled={uploading}>
               {uploading ? "Uploading..." : "Save Hero Section"}
