@@ -64,7 +64,7 @@ export default function NewCampaign() {
       const { data: campaign, error } = await supabase
         .from("campaigns")
         .insert({
-          campaign_name: formData.name, // use the correct column name in your table
+          campaign_name: formData.campaign_name,
           date_start: formData.date_start,
           date_end: formData.date_end,
         })
