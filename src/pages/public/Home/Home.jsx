@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import Footer from "./components/Footer";
-import Header from "./components/Header";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
 
 import { supabase } from "@/lib/supabase-client.js";
 import { ca, is } from "zod/locales";
@@ -96,7 +96,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="wrapper-home bg-background">
+      <div className="wrapper-home bg-background ">
         <Header />
 
         {/* Hero Section */}
@@ -109,12 +109,12 @@ export default function Home() {
               {heroData?.hero_description ||
                 "Discover our amazing products and services."}
             </p>
-            <a
-              href="#"
+            <Link
+              to={`/campaign/${heroData?.campaign_id}`}
               className="bg-primary text-primary-foreground rounded-full px-6 py-3 text-sm font-bold"
             >
               See More
-            </a>
+            </Link>
           </div>
           <div>
             <img

@@ -12,9 +12,11 @@ import ProductDetails from "./pages/admin/Products/ProductDetails";
 import EditProduct from "./pages/admin/Products/EditProduct";
 import PageBuilder from "./pages/admin/PageBuilder/PageBuilder";
 import Home from "./pages/public/Home/Home";
+import CampaignPage from "./pages/public/CampaignPage/CampaignPage";
 import Campaign from "./pages/admin/Campaigns/Campaign";
 import NewCampaign from "./pages/admin/Campaigns/NewCampaign";
 import CampaignDetails from "./pages/admin/Campaigns/CampaignDetails";
+import ProductPage from "./pages/public/ProductPage/ProductPage";
 
 function App() {
   const { user, loading } = useAuth();
@@ -35,6 +37,8 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/" element={<Home />} />
+      <Route path="/campaign/:id" element={<CampaignPage />} />
+      <Route path="/product/:id" element={<ProductPage />} />
 
       {/* Protected dashboard */}
       <Route element={<ProtectedRoute />}>

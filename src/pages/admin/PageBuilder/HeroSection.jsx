@@ -6,6 +6,15 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -20,11 +29,12 @@ export default function HeroSection() {
   const [heroImageUrl, setHeroImageUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const { register, handleSubmit, reset, watch } = useForm({
+  const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
       hero_title: "",
       hero_description: "",
       hero_image_file: null,
+      campaign_id: "",
     },
   });
 
@@ -46,6 +56,7 @@ export default function HeroSection() {
         hero_title: data.hero_title || "",
         hero_description: data.hero_description || "",
         hero_image_file: null,
+        campaign_id: data.campaign_id ? String(data.campaign_id) : "",
       });
       setHeroImageUrl(data.hero_image_url || null);
     }
@@ -54,6 +65,23 @@ export default function HeroSection() {
 
   useEffect(() => {
     fetchHeroData();
+  }, []);
+
+  //fetch campaigns for dropdown
+  const [campaigns, setCampaigns] = useState([]);
+
+  const fetchCampaigns = async () => {
+    const { data, error } = await supabase
+      .from("campaigns")
+      .select("id, campaign_name");
+    if (error) {
+      console.error("Error fetching campaigns:", error);
+    } else {
+      setCampaigns(data);
+    }
+  };
+  useEffect(() => {
+    fetchCampaigns();
   }, []);
 
   const uploadImage = async (file) => {
@@ -100,6 +128,7 @@ export default function HeroSection() {
         hero_title: formData.hero_title,
         hero_description: formData.hero_description,
         hero_image_url: imageUrl, // <-- must pass the actual URL
+        campaign_id: formData.campaign_id ? Number(formData.campaign_id) : null,
       })
       .eq("slug", "home");
 
@@ -186,7 +215,32 @@ export default function HeroSection() {
                 </FieldDescription>
               </Field>
 
-              
+              <Field>
+                <FieldLabel>Campaign</FieldLabel>
+                <Select
+                  value={watch("campaign_id")?.toString()}
+                  onValueChange={(value) => setValue("campaign_id", value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select Campaign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {campaigns.map((campaign) => (
+                        <SelectItem
+                          key={campaign.id}
+                          value={String(campaign.id)}
+                        >
+                          {campaign.campaign_name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  Link the hero banner to a campaign page.
+                </FieldDescription>
+              </Field>
             </FieldGroup>
             <Button type="submit" className="mt-4 ml-auto" disabled={uploading}>
               {uploading ? "Uploading..." : "Save Hero Section"}

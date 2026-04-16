@@ -1,5 +1,6 @@
 import { Menu, ShoppingCart, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 
 export default function Header() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
@@ -17,9 +18,9 @@ export default function Header() {
   return (
     <>
       <header className="bg-background sticky top-0 z-20 flex h-[80px] items-center justify-between gap-x-16 px-4 py-2">
-        <h1 className="text-primary text-lg font-bold lg:text-xl">
+        <Link to="/" className="text-primary text-lg font-bold lg:text-xl">
           Arafel's Gift Shop
-        </h1>
+        </Link>
 
         {/* For desktop */}
         {!isMobile && (
