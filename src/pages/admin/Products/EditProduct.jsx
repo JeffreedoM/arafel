@@ -23,6 +23,8 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+// import { Switch } from "@/components/ui/switch"
 
 import AddCategory from "./AddCategory";
 

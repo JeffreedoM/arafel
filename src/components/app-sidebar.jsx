@@ -20,6 +20,7 @@ import {
 } from "@tabler/icons-react";
 
 import { NavProducts } from "@/components/nav-products";
+import { NavTransactions } from "@/components/nav-transactions";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
@@ -43,7 +44,7 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: "/admin/dashboard",
       icon: IconDashboard,
     },
     // {
@@ -53,14 +54,14 @@ const data = {
     // },
     {
       title: "Page Builder",
-      url: "/page-builder",
+      url: "/admin/page-builder",
       icon: IconListDetails,
     },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
+    // {
+    //   title: "Team",
+    //   url: "#",
+    //   icon: IconUsers,
+    // },
   ],
   navClouds: [
     {
@@ -122,20 +123,27 @@ const data = {
       icon: IconHelp,
     },
   ],
+  transactions: [
+    {
+      title: "New Orders",
+      url: "/admin/transactions/orders",
+      icon: IconReport,
+    },
+  ],
   products: [
     {
       title: "All Products",
-      url: "/products",
+      url: "/admin/products",
       icon: IconBox,
     },
-    {
-      title: "Categories",
-      url: "#",
-      icon: IconCategory,
-    },
+    // {
+    //   title: "Categories",
+    //   url: "#",
+    //   icon: IconCategory,
+    // },
     {
       title: "Campaigns",
-      url: "/campaigns",
+      url: "/admin/campaigns",
       icon: IconReport,
     },
   ],
@@ -164,6 +172,7 @@ export function AppSidebar({ ...props }) {
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProducts items={data.products} />
+        <NavTransactions items={data.transactions} />
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>

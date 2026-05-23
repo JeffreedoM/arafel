@@ -17,6 +17,9 @@ import Campaign from "./pages/admin/Campaigns/Campaign";
 import NewCampaign from "./pages/admin/Campaigns/NewCampaign";
 import CampaignDetails from "./pages/admin/Campaigns/CampaignDetails";
 import ProductPage from "./pages/public/ProductPage/ProductPage";
+import ProductsPage from "./pages/public/Products/Products";
+import CategoriesPage from "./pages/public/Products/Categories";
+import TransactionManager from "./pages/admin/TransactionManager/TransactionManager";
 
 function App() {
   const { user, loading } = useAuth();
@@ -30,7 +33,7 @@ function App() {
 
       <Route
         path="/login"
-        element={user ? <Navigate to="/dashboard" replace /> : <Login />}
+        element={user ? <Navigate to="/admin/dashboard" replace /> : <Login />}
       />
 
       {/* Public routes */}
@@ -39,34 +42,49 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/campaign/:id" element={<CampaignPage />} />
       <Route path="/product/:id" element={<ProductPage />} />
+      <Route path="/products" element={<ProductsPage />} />
+      <Route path="/categories" element={<CategoriesPage />} />
 
       {/* Protected dashboard */}
       <Route element={<ProtectedRoute />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          {/* URL nito ay magiging: /admin/dashboard */}
+          <Route path="dashboard" element={<Dashboard />} />
 
+          {/* URL Prefix: /admin/transactions/* */}
+          <Route path="transactions">
+            <Route index element={<TransactionManager />} />
+            <Route path="orders" element={<TransactionManager />} />
+            {/* /admin/transactions */}
+          </Route>
+
+          {/* URL Prefix: /admin/products/* */}
           <Route path="products">
-            <Route index element={<Products />} />
+            <Route index element={<Products />} /> {/* /admin/products */}
             <Route path="create" element={<CreateProduct />} />
+            {/* /admin/products/create */}
             <Route path=":id/edit" element={<EditProduct />} />
+            {/* /admin/products/:id/edit */}
             <Route path=":id" element={<ProductDetails />} />
+            {/* /admin/products/:id */}
           </Route>
 
+          {/* URL Prefix: /admin/campaigns/* */}
           <Route path="campaigns">
-            <Route index element={<Campaign />} />
+            <Route index element={<Campaign />} /> {/* /admin/campaigns */}
             <Route path="new" element={<NewCampaign />} />
+            {/* /admin/campaigns/new */}
             <Route path=":id" element={<CampaignDetails />} />
+            {/* /admin/campaigns/:id */}
           </Route>
 
+          {/* URL Prefix: /admin/page-builder */}
           <Route path="page-builder">
             <Route index element={<PageBuilder />} />
-            {/* <Route path="create" element={<CreateProduct />} />
-            <Route path=":id/edit" element={<EditProduct />} />
-            <Route path=":id" element={<ProductDetails />} /> */}
+            {/* /admin/page-builder */}
           </Route>
         </Route>
       </Route>
-
       {/* Fallback */}
       <Route path="*" element={<NotFound />} />
     </Routes>

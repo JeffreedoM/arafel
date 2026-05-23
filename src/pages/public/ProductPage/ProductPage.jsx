@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import RelatedProducts from "./RelatedProducts";
 export default function ProductPage() {
   const { id } = useParams(); // 👈 grabs 41
   const [product, setProduct] = useState(null);
@@ -83,7 +84,7 @@ export default function ProductPage() {
     <>
       <div className="wrapper-home bg-background">
         <Header />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-h-screen">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="container mx-auto gap-x-20 px-4 py-10 font-[inter] lg:flex">
               <div className="flex max-w-xl flex-col lg:order-2">
@@ -116,9 +117,26 @@ export default function ProductPage() {
                   Delete Product
                 </Button>
               </div> */}
+
+                <div className="mt-auto mb-10 flex gap-4">
+                  <a
+                    href="https://m.me/100095630491878"
+                    target="_blank"
+                    class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 font-medium text-white shadow transition duration-150 hover:bg-blue-700"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5 fill-current"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2C6.48 2 2 6.14 2 11.25c0 2.91 1.45 5.51 3.71 7.14V22l3.43-1.88c.88.24 1.81.38 2.77.38 5.52 0 10-4.14 10-9.25S17.52 2 12 2zm1.14 11.97l-2.54-2.71-4.96 2.71 5.45-5.79 2.61 2.71 4.88-2.71-5.44 5.79z" />
+                    </svg>
+                    Inquire via Messenger
+                  </a>
+                </div>
               </div>
 
-              <div className="max-w-xl w-full grow gap-4 lg:flex">
+              <div className="w-full max-w-xl grow gap-4 lg:flex">
                 {/* MAIN IMAGE */}
                 <div className="mb-2 flex-1 lg:mb-0">
                   {selectedImage && (
@@ -150,6 +168,11 @@ export default function ProductPage() {
             </div>
           </div>
         </div>
+
+        <RelatedProducts 
+        currentProductId={product.id} 
+        categoryId={product.category_id} 
+      />
       </div>
 
       <Footer />
