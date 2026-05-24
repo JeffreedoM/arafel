@@ -173,9 +173,9 @@ export default function Header() {
               </Link>
             </li>
             <li>
-              <span className="cursor-pointer hover:text-indigo-600">
+              <Link to="/categories" className="hover:text-indigo-600">
                 Categories
-              </span>
+              </Link>
             </li>
           </ul>
         )}
