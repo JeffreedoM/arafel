@@ -10,10 +10,7 @@ export default function Campaign() {
   const [campaign, setCampaign] = useState(null);
 
   useEffect(() => {
-    if (!id) {
-      console.error("Error: Walang campaign ID sa URL!");
-      return;
-    }
+    if (!id) return;
 
     const fetchData = async () => {
       // 1. Fetch campaign
