@@ -5,16 +5,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 // shadcn
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Command,
@@ -25,24 +23,19 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { useEffect, useState } from "react";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase-client";
+import {
+  FolderPlus,
+  Folder,
+  ChevronsUpDown,
+  Plus,
+  Loader2,
+} from "lucide-react";
 
 export default function AddCategory({
-  categories,
+  categories = [],
   onSelectCategory,
   selectedCategory,
   setCategories,
@@ -51,7 +44,6 @@ export default function AddCategory({
   const {
     register,
     handleSubmit,
-    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm({
@@ -64,6 +56,7 @@ export default function AddCategory({
 
   const [openCategories, setOpenCategories] = useState(false);
   const [openAddCategory, setOpenAddCategory] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchCategories = async () => {
     const { data, error } = await supabase
@@ -75,7 +68,6 @@ export default function AddCategory({
       console.error("Fetch categories error:", error);
       return [];
     }
-
     return data;
   };
 
@@ -88,7 +80,7 @@ export default function AddCategory({
 
     const formattedName = ucwords(data.categoryName);
 
-    // 🔍 check if category already exists (case-insensitive)
+    // check if category already exists
     const { data: existingCategory, error: fetchError } = await supabase
       .from("product_categories")
       .select("id")
@@ -105,7 +97,7 @@ export default function AddCategory({
       return;
     }
 
-    // ➕ insert new category
+    // insert new category
     const { data: insertedCategory, error } = await supabase
       .from("product_categories")
       .insert({
@@ -119,98 +111,188 @@ export default function AddCategory({
       return;
     }
 
-    console.log("Category added:", insertedCategory);
     setOpenAddCategory(false);
     reset();
-    fetchCategories().then(setCategories);
+
+    // Automatically select the freshly generated category item
+    onSelectCategory(insertedCategory.id);
+
+    const freshData = await fetchCategories();
+    setCategories(freshData);
   };
 
+  const currentSelectionName = categories.find(
+    (cat) => cat.id === selectedCategory,
+  )?.category_name;
+
   return (
-    <Field className="flex flex-col gap-4">
-      <FieldLabel>Product Category</FieldLabel>
+    <Field className="space-y-2">
+      <FieldLabel className="text-foreground text-sm font-semibold">
+        Product Category
+      </FieldLabel>
+
+      {/* Combobox Selection Action Button */}
       <Button
         onClick={() => setOpenCategories(true)}
         variant="outline"
         type="button"
-        className="w-fit cursor-pointer"
+        className={`h-10 w-full justify-between font-normal shadow-sm ${
+          currentSelectionName ? "text-foreground" : "text-muted-foreground"
+        } ${error ? "border-destructive focus-visible:ring-destructive" : ""}`}
       >
-        {selectedCategory
-          ? categories.find((cat) => cat.id === selectedCategory)?.category_name
-          : "Select Category"}
-      </Button>
-      {error && (
-        <span className="-mt-1 text-sm font-semibold text-red-500">
-          {error.message}
+        <span className="flex items-center gap-2 truncate">
+          <Folder className="text-muted-foreground/70 h-4 w-4 shrink-0" />
+          {currentSelectionName || "Select product category..."}
         </span>
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+
+      {error && (
+        <p className="text-destructive mt-1 text-xs font-medium">
+          {error.message}
+        </p>
       )}
 
+      {/* Main Search Command Dialog */}
       <CommandDialog open={openCategories} onOpenChange={setOpenCategories}>
-        <Command>
-          <CommandInput placeholder="Type a category name or add a new category" />
-          <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+        <Command label="Search categories" className="rounded-lg shadow-md">
+          <CommandInput
+            placeholder="Search categories..."
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
+          <CommandList className="max-h-[300px] overflow-y-auto p-1">
+            {/* Inline Action Option if searching returns empty sets */}
+            <CommandEmpty className="py-6 text-center text-sm">
+              <p className="text-muted-foreground mb-3">
+                No category matching "{searchQuery}"
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => {
+                  setOpenCategories(false);
+                  setOpenAddCategory(true);
+                  // Optional: seed your form reset value using the current queries
+                  reset({ categoryName: searchQuery });
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add "{searchQuery || "New"}" Category
+              </Button>
+            </CommandEmpty>
 
-            {/* Add Category */}
+            {/* Creation Trigger Header Button Option */}
+            <div className="border-b px-1 py-1">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-primary hover:text-primary hover:bg-primary/5 h-9 w-full justify-start gap-2 px-2 text-xs font-medium"
+                onClick={() => {
+                  setOpenCategories(false);
+                  setOpenAddCategory(true);
+                }}
+              >
+                <FolderPlus className="h-4 w-4" />
+                Create a clean, brand new category option
+              </Button>
+            </div>
 
-            <Dialog open={openAddCategory} onOpenChange={setOpenAddCategory}>
-              <DialogTrigger className="hover:bg-accent hover:text-accent-foreground mx-1 my-1 w-full cursor-pointer rounded-md p-3 pb-4 text-sm underline underline-offset-8">
-                Add New Category
-              </DialogTrigger>
-              <form>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className="mb-4">
-                      New Product Category
-                    </DialogTitle>
-                    <FieldGroup>
-                      <Field>
-                        <FieldLabel htmlFor="categoryName">
-                          Category Name
-                        </FieldLabel>
-                        <Input
-                          id="categoryName"
-                          {...register("categoryName")}
-                        />
-                        {errors.categoryName && (
-                          <span className="-mt-1 text-sm font-semibold text-red-500">
-                            {errors.categoryName.message}
-                          </span>
-                        )}
-                      </Field>
-                      <Field>
-                        <Button
-                          type="submit"
-                          onClick={handleSubmit(submitCategory)}
-                          className="cursor-pointer"
-                        >
-                          Add Category
-                        </Button>
-                      </Field>
-                    </FieldGroup>
-                  </DialogHeader>
-                </DialogContent>
-              </form>
-            </Dialog>
-
-            {/* End of Add Category */}
-
-            <CommandGroup heading="Categories">
+            <CommandGroup heading="Existing Registry">
               {categories.map((category) => (
                 <CommandItem
                   key={category.id}
+                  value={category.category_name}
                   onSelect={() => {
-                    console.log("Selected category:", category);
                     onSelectCategory(category.id);
                     setOpenCategories(false);
+                    setSearchQuery("");
                   }}
+                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-sm"
                 >
-                  {category.category_name}
+                  <Folder className="text-muted-foreground/60 h-3.5 w-3.5" />
+                  <span className="font-medium">{category.category_name}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
           </CommandList>
         </Command>
       </CommandDialog>
+
+      {/* Completely decoupled, structurally isolated Dialog Form element */}
+      <Dialog open={openAddCategory} onOpenChange={setOpenAddCategory}>
+        <DialogContent className="sm:max-w-md">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault(); // Prevents default page reload
+              e.stopPropagation(); // 💥 FIX: Stops the event from hitting the parent product form
+              handleSubmit(submitCategory)(e);
+            }}
+            className="space-y-4"
+          >
+            <DialogHeader>
+              <div className="bg-primary/10 text-primary mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full">
+                <FolderPlus className="h-5 w-5" />
+              </div>
+              <DialogTitle className="text-center text-lg">
+                New Product Category
+              </DialogTitle>
+              <DialogDescription className="text-center text-xs">
+                Create alternative organizational scopes. Names format
+                automatically to standard capitalization guidelines.
+              </DialogDescription>
+            </DialogHeader>
+
+            <Field className="space-y-1.5">
+              <Input
+                id="categoryName"
+                placeholder="e.g., Summer Collection, Footwear"
+                autoComplete="off"
+                {...register("categoryName")}
+                className={
+                  errors.categoryName
+                    ? "border-destructive focus-visible:ring-destructive"
+                    : ""
+                }
+              />
+              {errors.categoryName && (
+                <p className="text-destructive text-xs font-medium">
+                  {errors.categoryName.message}
+                </p>
+              )}
+            </Field>
+
+            <DialogFooter className="gap-2 pt-2 sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpenAddCategory(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="font-medium shadow-sm"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Category"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Field>
   );
 }
