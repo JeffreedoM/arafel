@@ -20,6 +20,7 @@ import ProductPage from "./pages/public/ProductPage/ProductPage";
 import ProductsPage from "./pages/public/Products/Products";
 import CategoriesPage from "./pages/public/Products/Categories";
 import TransactionManager from "./pages/admin/TransactionManager/TransactionManager";
+import SalesHistory from "./pages/admin/TransactionManager/SalesHistory";
 
 function App() {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ function App() {
           <Route path="transactions">
             <Route index element={<TransactionManager />} />
             <Route path="orders" element={<TransactionManager />} />
+            <Route path="sales-history" element={<SalesHistory />} />
             {/* /admin/transactions */}
           </Route>
 

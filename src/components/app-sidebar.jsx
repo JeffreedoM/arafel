@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   IconBox,
   IconCamera,
+  IconCashRegister,
   IconCategory,
   IconChartBar,
   IconDashboard,
@@ -125,8 +126,13 @@ const data = {
   ],
   transactions: [
     {
-      title: "New Orders",
+      title: "Sales Register (Cashier)",
       url: "/admin/transactions/orders",
+      icon: IconCashRegister,
+    },
+    {
+      title: "Sales History",
+      url: "/admin/transactions/sales-history",
       icon: IconReport,
     },
   ],

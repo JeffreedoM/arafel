@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase-client"; // Ensure this matches your supabase client path
 import { SiteHeader } from "@/components/site-header";
+import { useSnackbar } from "notistack"; // 👈 Inimport ang Notistack Hook
 import {
   Card,
   CardContent,
@@ -37,14 +38,24 @@ import {
   CheckCircle2,
   Wand2,
   Keyboard,
+  Coins,
 } from "lucide-react";
 
 export default function TransactionManager() {
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar(); // 👈 Ininitialize ang snackbar functions
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState([]);
+
+  // Database Field States
   const [orderSource, setOrderSource] = useState("walk-in");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [transactionNotes, setTransactionNotes] = useState("");
+
+  // Calculator / Change States
+  const [amountReceived, setAmountReceived] = useState("");
 
   // State handles for Customization Modal (For catalog items)
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
@@ -58,6 +69,9 @@ export default function TransactionManager() {
   const [manualName, setManualName] = useState("");
   const [manualPrice, setManualPrice] = useState("");
   const [manualNotes, setManualNotes] = useState("");
+
+  // for submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 1. FETCH REAL DATA FROM SUPABASE
   useEffect(() => {
@@ -86,13 +100,16 @@ export default function TransactionManager() {
         setProducts(data || []);
       } catch (error) {
         console.error("Error fetching products:", error.message);
+        enqueueSnackbar("Failed to fetch products registry from server.", {
+          variant: "error",
+        });
       } finally {
         setLoading(false);
       }
     }
 
     fetchProducts();
-  }, []);
+  }, [enqueueSnackbar]);
 
   // Filter items via search query
   const filteredProducts = products.filter((product) =>
@@ -120,7 +137,13 @@ export default function TransactionManager() {
     );
     if (existingItem) {
       if (existingItem.quantity >= numericStock) {
-        alert(`Sorry, only ${numericStock} items remaining in stock.`);
+        // 👈 Mas propesyonal na Notification Alert
+        enqueueSnackbar(
+          `Stock Boundary limit! Only ${numericStock} units left for this item.`,
+          {
+            variant: "warning",
+          },
+        );
         return;
       }
       setCart(
@@ -130,26 +153,43 @@ export default function TransactionManager() {
             : item,
         ),
       );
+      enqueueSnackbar(`Increased quantity for ${product.product_name}.`, {
+        variant: "success",
+        autoHideDuration: 1500,
+      });
     } else {
       if (numericStock <= 0) {
-        alert("This item is currently out of stock.");
+        enqueueSnackbar(
+          "Operation Denied: This catalog item is completely out of stock.",
+          {
+            variant: "error",
+          },
+        );
         return;
       }
       setCart([
         ...cart,
         { ...product, quantity: 1, cartItemId: `catalog-${product.id}` },
       ]);
+      enqueueSnackbar(`${product.product_name} added to cart counter.`, {
+        variant: "success",
+        autoHideDuration: 1500,
+      });
     }
   };
 
   // CONFIRM CUSTOM ITEM ADDITION (From catalog)
   const handleAddCustomProductConfirm = () => {
     if (!customPrice || parseFloat(customPrice) <= 0) {
-      alert("Please enter a valid custom price.");
+      enqueueSnackbar(
+        "Validation Alert: Please assign a proper value logic for the custom price.",
+        {
+          variant: "warning",
+        },
+      );
       return;
     }
 
-    // Generate a unique identifier since the same product structure can have different notes
     const uniqueCartId = `custom-${selectedProductForCustom.id}-${Date.now()}`;
 
     const customItemPayload = {
@@ -164,22 +204,35 @@ export default function TransactionManager() {
     setCart([...cart, customItemPayload]);
     setIsCustomModalOpen(false);
     setSelectedProductForCustom(null);
+    enqueueSnackbar("Custom configurations appended to order listing.", {
+      variant: "success",
+    });
   };
 
   // CONFIRM PURE MANUAL ENTRY (For services/fees/items not in DB)
   const handleAddManualEntryConfirm = () => {
     if (!manualName.trim()) {
-      alert("Please enter an item or service name.");
+      enqueueSnackbar(
+        "Required Field: Please declare a label/name for the custom entry.",
+        {
+          variant: "warning",
+        },
+      );
       return;
     }
     if (!manualPrice || parseFloat(manualPrice) < 0) {
-      alert("Please enter a valid price.");
+      enqueueSnackbar(
+        "Validation Alert: Price fields cannot contain negative numbers or blank characters.",
+        {
+          variant: "warning",
+        },
+      );
       return;
     }
 
     const uniqueCartId = `manual-${Date.now()}`;
     const manualItemPayload = {
-      id: null, // No database item linked
+      id: null,
       product_name: manualName,
       price: parseFloat(manualPrice),
       customNotes: manualNotes || "Manual layout override entry.",
@@ -196,6 +249,10 @@ export default function TransactionManager() {
     setManualName("");
     setManualPrice("");
     setManualNotes("");
+    enqueueSnackbar(
+      "Manual workflow override line injected into active counter.",
+      { variant: "info" },
+    );
   };
 
   // UPDATE QUANTITY HANDLER
@@ -204,19 +261,20 @@ export default function TransactionManager() {
       cart
         .map((item) => {
           if (item.cartItemId === cartItemId) {
-            // Manual entries and customized packages ignore inventory count checks
             if (item.isCustomized || item.isCustomEntry) {
               const newQty = item.quantity + amount;
               return newQty > 0 ? { ...item, quantity: newQty } : null;
             }
 
-            // Standard catalog inventory validation checks
             const numericStock = item.stock ? parseInt(item.stock, 10) : 0;
             const newQty = item.quantity + amount;
 
             if (amount > 0 && newQty > numericStock) {
-              alert(
-                `Sorry, maximum available stock limit is ${numericStock} units.`,
+              enqueueSnackbar(
+                `Cannot exceed absolute warehouse limits (${numericStock} units).`,
+                {
+                  variant: "warning",
+                },
               );
               return item;
             }
@@ -231,6 +289,10 @@ export default function TransactionManager() {
   // REMOVE ITEM FROM CART
   const removeFromCart = (cartItemId) => {
     setCart(cart.filter((item) => item.cartItemId !== cartItemId));
+    enqueueSnackbar("Line item removed from active counter list.", {
+      variant: "neutral",
+      autoHideDuration: 2000,
+    });
   };
 
   // SUBTOTAL COMPUTATION
@@ -239,22 +301,138 @@ export default function TransactionManager() {
     0,
   );
 
+  // Ilagay ito malapit sa "subtotal" constant
+  const parsedAmountReceived = parseFloat(amountReceived) || 0;
+  const changeAmount = Math.max(0, parsedAmountReceived - subtotal);
+  const isCashValid =
+    paymentMethod === "cash"
+      ? amountReceived !== "" && parsedAmountReceived >= subtotal
+      : true;
+
   // TRANSACTION SUBMISSION ENGINE
   const handleProcessSale = async () => {
     if (cart.length === 0) return;
 
-    try {
-      // NOTE FOR CAPSTONE DEFENSE:
-      // 1. Insert master transaction record into `sales` / `transactions` table.
-      // 2. Map and loop items into a `sales_items` table (storing product_id, quantity, customNotes, and adjusted price).
-      // 3. Decrement regular items stock inside your table.
-
-      alert(
-        `Transaction logged successfully via ${orderSource.toUpperCase()}! Total Due: ₱${subtotal.toLocaleString()}`,
+    // Validation para sa kulang na bayad kapag cash
+    if (
+      paymentMethod === "cash" &&
+      (!amountReceived || parsedAmountReceived < subtotal)
+    ) {
+      enqueueSnackbar(
+        "Validation Error: Please enter a valid amount received (at least ₱" +
+          subtotal.toLocaleString() +
+          ")",
+        {
+          variant: "error",
+        },
       );
+      return;
+    }
+
+    const actionKey = enqueueSnackbar(
+      "Synchronizing transaction lifecycle payloads with database rows...",
+      {
+        variant: "info",
+        persist: true, // Hindi mawawala hangga't hindi natin tinatawag ang closeSnackbar
+      },
+    );
+
+    try {
+      setIsSubmitting(true);
+
+      // =========================
+      // 1. CREATE MASTER SALE
+      // =========================
+      const { data: saleData, error: saleError } = await supabase
+        .from("sales")
+        .insert([
+          {
+            total_amount: subtotal,
+            order_source: orderSource,
+            payment_method: paymentMethod, // 👈 Pinasa na ang napiling payment method
+            notes: transactionNotes || null, // 👈 Pinasa na ang transaction notes
+            amount_received:
+              paymentMethod === "cash" ? parsedAmountReceived : subtotal,
+          },
+        ])
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      const saleId = saleData.id;
+
+      // =========================
+      // 2. PREPARE SALES ITEMS
+      // =========================
+      const salesItemsPayload = cart.map((item) => ({
+        sales_id: saleId,
+        product_id: item.id || null,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.price,
+        custom_notes: item.customNotes || null,
+        is_manual_entry: item.isCustomEntry || false, // Inugnay sa field ng schema mo
+      }));
+
+      // =========================
+      // 3. INSERT SALES ITEMS
+      // =========================
+      const { error: salesItemsError } = await supabase
+        .from("sales_items")
+        .insert(salesItemsPayload);
+
+      if (salesItemsError) throw salesItemsError;
+
+      // =========================
+      // 4. UPDATE STOCKS
+      // =========================
+      for (const item of cart) {
+        if (item.isCustomEntry || item.isCustomized || !item.id) {
+          continue;
+        }
+
+        const numericStock = parseInt(item.stock, 10);
+        const newStock = numericStock - item.quantity;
+
+        const { error: stockError } = await supabase
+          .from("products")
+          .update({ stock: newStock })
+          .eq("id", item.id);
+
+        if (stockError) throw stockError;
+      }
+
+      // =========================
+      // SUCCESS WORKFLOW
+      // =========================
+      closeSnackbar(actionKey); // 👈 Isara ang loading notification
+
+      enqueueSnackbar(
+        `Transaction Processed! Sale ID: ${saleId} • Total: ₱${subtotal.toLocaleString()}`,
+        {
+          variant: "success",
+          autoHideDuration: 6000,
+        },
+      );
+
+      // Reset states on success
       setCart([]);
+      setAmountReceived("");
+      setTransactionNotes("");
     } catch (error) {
-      console.error("Error logging transaction profiles:", error);
+      console.error("Transaction Error:", error);
+      closeSnackbar(actionKey); // 👈 Isara ang loading notification kung may sumabog
+
+      enqueueSnackbar(
+        `Pipeline Error: ${error.message || "Failed to commit logs"}`,
+        {
+          variant: "error",
+          persist: true,
+        },
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -401,30 +579,51 @@ export default function TransactionManager() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Transaction Source Selection */}
-                <div className="space-y-1.5">
-                  <label className="text-muted-foreground text-xs font-semibold">
-                    Transaction Order Source
-                  </label>
-                  <Select value={orderSource} onValueChange={setOrderSource}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Identify point of origin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="walk-in">
-                        Walk-in Client Account
-                      </SelectItem>
-                      <SelectItem value="messenger">
-                        Facebook Messenger Deal Close
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                {/* Flow Control Inputs */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                      Order Source
+                    </label>
+                    <Select value={orderSource} onValueChange={setOrderSource}>
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Identify point of origin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="walk-in">Walk-in Client</SelectItem>
+                        <SelectItem value="messenger">FB Messenger</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                      Payment Method
+                    </label>
+                    <Select
+                      value={paymentMethod}
+                      onValueChange={(val) => {
+                        setPaymentMethod(val);
+                        if (val !== "cash") setAmountReceived(""); // I-reset kapag hindi cash
+                      }}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="gcash">GCash</SelectItem>
+                        <SelectItem value="maya">Maya</SelectItem>
+                        <SelectItem value="bank">Bank Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <Separator />
 
                 {/* Items Container View */}
-                <div className="max-h-[380px] space-y-3 overflow-y-auto pr-1">
+                <div className="max-h-[260px] space-y-3 overflow-y-auto pr-1">
                   {cart.length === 0 ? (
                     <div className="text-muted-foreground py-8 text-center text-sm">
                       Terminal empty. Add items from catalog or create custom
@@ -483,7 +682,6 @@ export default function TransactionManager() {
                             </Button>
                           </div>
                         </div>
-                        {/* Custom Instruction Display Box */}
                         {item.customNotes && (
                           <div className="bg-muted/50 text-muted-foreground mt-1 rounded border border-dashed p-1.5 text-[11px]">
                             <span className="font-semibold text-neutral-600">
@@ -499,29 +697,86 @@ export default function TransactionManager() {
 
                 <Separator />
 
-                {/* Computational Summary Block */}
-                <div className="space-y-1.5 pt-1">
-                  <div className="text-muted-foreground flex justify-between text-sm">
+                {/* Calculator & Change Block */}
+                <div className="bg-muted/30 space-y-2.5 rounded-xl border p-3">
+                  <div className="text-muted-foreground flex justify-between text-xs">
                     <span>Total Quantities:</span>
-                    <span>
+                    <span className="text-foreground font-medium">
                       {cart.reduce((acc, item) => acc + item.quantity, 0)} pcs
                     </span>
                   </div>
-                  <div className="flex justify-between text-lg font-bold">
+
+                  <div className="flex justify-between border-b pb-2 text-base font-bold">
                     <span>Grand Total:</span>
                     <span className="text-emerald-600">
                       ₱{subtotal.toLocaleString()}
                     </span>
                   </div>
+
+                  {/* Dynamic Cash Calculator Inputs */}
+                  {paymentMethod === "cash" && (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
+                          <Coins className="h-3 w-3" /> Amount Received:
+                        </label>
+                        <div className="relative w-32">
+                          <span className="text-muted-foreground absolute top-1.5 left-2 text-xs">
+                            ₱
+                          </span>
+                          <Input
+                            type="number"
+                            required
+                            placeholder="0.00"
+                            className="h-7 pl-5 text-right text-xs font-semibold"
+                            value={amountReceived}
+                            onChange={(e) => setAmountReceived(e.target.value)}
+                            disabled={cart.length === 0}
+                          />
+                        </div>
+                      </div>
+
+                      {parsedAmountReceived > 0 && (
+                        <div className="bg-background flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs">
+                          <span className="text-muted-foreground font-medium">
+                            Computed Change:
+                          </span>
+                          <span
+                            className={`text-sm font-bold ${parsedAmountReceived < subtotal ? "text-destructive" : "text-blue-600"}`}
+                          >
+                            {parsedAmountReceived < subtotal
+                              ? `Short: ₱${(subtotal - parsedAmountReceived).toLocaleString()}`
+                              : `₱${changeAmount.toLocaleString()}`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Transaction Level Notes Form Input */}
+                  <div className="space-y-1 pt-1">
+                    <label className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+                      Transaction Notes / Internal Memo
+                    </label>
+                    <Textarea
+                      placeholder="Optional layout override instructions, tracking markers, etc..."
+                      className="min-h-[40px] resize-none p-1.5 text-xs"
+                      value={transactionNotes}
+                      onChange={(e) => setTransactionNotes(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 {/* Final Submission Executable */}
                 <Button
-                  className="mt-2 w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  disabled={cart.length === 0}
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  disabled={
+                    cart.length === 0 || isSubmitting || !isCashValid // 👈 Dito ayun, ma-di-disable kung invalid ang cash
+                  }
                   onClick={handleProcessSale}
                 >
-                  <CheckCircle2 className="mr-2 h-4 w-4" /> Process Transaction
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {isSubmitting ? "Processing..." : "Process Transaction"}
                 </Button>
               </CardContent>
             </Card>
