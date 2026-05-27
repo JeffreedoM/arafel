@@ -1,9 +1,12 @@
+import { useState } from "react"; // Added
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; // Added
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
+  getFilteredRowModel, // Added
 } from "@tanstack/react-table";
 
 import {
@@ -16,15 +19,36 @@ import {
 } from "@/components/ui/table";
 
 export function DataTable({ columns, data }) {
+  // 1. Create a state to store the column filters
+  const [columnFilters, setColumnFilters] = useState([]);
+
   const table = useReactTable({
     data,
     columns,
     getPaginationRowModel: getPaginationRowModel(),
     getCoreRowModel: getCoreRowModel(),
+    // 2. Hook up the filter state and the filter engine
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    state: {
+      columnFilters,
+    },
   });
 
   return (
     <div>
+      {/* 3. Search Input Element */}
+      <div className="flex items-center py-4">
+        <Input
+          placeholder="Search products..."
+          value={table.getColumn("product_name")?.getFilterValue() ?? ""}
+          onChange={(event) =>
+            table.getColumn("product_name")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+      </div>
+
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
