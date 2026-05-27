@@ -52,6 +52,7 @@ export default function AddCategory({
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(
@@ -120,6 +121,7 @@ export default function AddCategory({
 
     console.log("Category added:", insertedCategory);
     setOpenAddCategory(false);
+    reset();
     fetchCategories().then(setCategories);
   };
 

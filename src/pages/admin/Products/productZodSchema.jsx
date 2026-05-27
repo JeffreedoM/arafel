@@ -16,6 +16,7 @@ export const productZodSchema = z.object({
     })
     .int()
     .positive("Category is required"),
+  is_featured: z.boolean().default(false),
 });
 
 export const productDefaultValues = {
@@ -24,4 +25,5 @@ export const productDefaultValues = {
   category_id: undefined,
   // image: z.any().optional(), // Ensure this is not z.string()
   // stock: 0,
+  is_featured: false,
 };

@@ -2,33 +2,15 @@ import { SiteHeader } from "@/components/site-header";
 import { supabase } from "@/lib/supabase-client";
 
 // forms
-import { get, useForm } from "react-hook-form";
-import z from "zod";
+import { useForm } from "react-hook-form";
 import { productDefaultValues, productZodSchema } from "./productZodSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 // shadcn
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Switch } from "@/components/ui/switch"; // 👈 Import Switch (or use Checkbox)
 import {
   Card,
   CardHeader,
@@ -41,29 +23,35 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
+  FieldContent,
+  FieldTitle,
 } from "@/components/ui/field";
 import { useEffect, useState } from "react";
 import AddCategory from "./AddCategory";
 
+import { useSnackbar } from "notistack";
+
 export default function CreateProduct() {
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const {
     register,
     handleSubmit,
     watch,
     setValue,
-    getValues,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(productZodSchema),
     defaultValues: productDefaultValues,
   });
 
-  const [openCategories, setOpenCategories] = useState(false);
-
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categories, setCategories] = useState([]);
 
-  // console.log(watch("product_name")); // watch input value by passing the name of it
+  // 🔄 1. Magdagdag ng Key state para puwersahang i-reset ang file inputs sa UI
+  const [formKey, setFormKey] = useState(Date.now());
+
+  const isFeatured = watch("is_featured");
 
   /*
    * Thumbnail Image handling
@@ -85,6 +73,7 @@ export default function CreateProduct() {
     return () => URL.revokeObjectURL(url);
   }, [imageFile]);
 
+  // (Mananatili ang iyong uploadImage function...)
   const uploadImage = async (file) => {
     const fileExt = file.name.split(".").pop();
     const fileName = `${crypto.randomUUID()}.${fileExt}`;
@@ -98,18 +87,51 @@ export default function CreateProduct() {
       });
 
     if (error) throw error;
+    return filePath;
+  };
 
+  /*
+   * Gallery Image handling
+   */
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
+  const [galleryErrors, setGalleryErrors] = useState([]);
+
+  // (Mananatili ang iyong uploadFile function...)
+  const uploadFile = async (file) => {
+    const ext = file.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const filePath = `products/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("product-images")
+      .upload(filePath, file);
+
+    if (error) throw error;
     return filePath;
   };
 
   const onSubmit = async (formData) => {
+    const loadingKey = enqueueSnackbar(
+      "Saving product and uploading assets...",
+      { variant: "info", persist: true },
+    );
+
     try {
       if (!imageFile) {
         setImageError("Product image is required.");
+        enqueueSnackbar("Please upload a primary product image.", {
+          variant: "warning",
+        });
         return;
       }
 
-      if (imageError) return;
+      if (imageError) {
+        enqueueSnackbar("Please resolve image errors before submitting.", {
+          variant: "warning",
+        });
+        return;
+      }
 
       // 1️⃣ Create product
       const { data: newProduct, error: productError } = await supabase
@@ -133,51 +155,44 @@ export default function CreateProduct() {
 
       if (imageInsertError) throw imageInsertError;
 
-      // 3️⃣ Upload gallery images (if any)
-      for (let i = 0; i < galleryFiles.length; i++) {
-        const path = await uploadFile(galleryFiles[i]);
-        await supabase.from("product_images").insert({
-          product_id: newProduct.id,
-          image_url: path,
-          is_thumbnail: false,
-          order: i + 1, // after thumbnail
-        });
+      // 3️⃣ Upload gallery images
+      if (galleryFiles && galleryFiles.length > 0) {
+        for (let i = 0; i < galleryFiles.length; i++) {
+          const path = await uploadFile(galleryFiles[i]);
+          await supabase.from("product_images").insert({
+            product_id: newProduct.id,
+            image_url: path,
+            is_thumbnail: false,
+            order: i + 1,
+          });
+        }
       }
 
-      alert("Success!");
+      enqueueSnackbar("Product saved successfully!", { variant: "success" });
+
+      // 🧼 4️⃣ PAGLILINIS NG LOKAL NA MGA STATES
+      reset(); // Nililinis ang RHF fields
+
+      setImageFile(null); // Nililinis ang primary file binary
+      setGalleryFiles([]); // Nililinis ang gallery files binaries
+
+      // 🎯 DITO NATIN NILILINIS ANG MGA UI PREVIEWS AT BURAOT NA LABAS SA RHF:
+      setGalleryPreviews([]);
+      setGalleryErrors([]);
+      setSelectedCategory(null); // Ibinabalik sa "Select Category" ang button text
+
+      // 🔥 Binabago ang formKey para mag-render ulit ang mga `<input type="file" />` nang walang natitirang "File chosen" label
+      setFormKey(Date.now());
     } catch (err) {
       console.error("Submit Error:", err);
+      enqueueSnackbar(
+        err.message || "Failed to save product. Please try again.",
+        { variant: "error" },
+      );
+    } finally {
+      closeSnackbar(loadingKey);
     }
   };
-
-  /*
-   *  End of thumbnailimage handling
-   */
-
-  /*
-   * Gallery Image handling
-   */
-
-  const [galleryFiles, setGalleryFiles] = useState([]);
-  const [galleryPreviews, setGalleryPreviews] = useState([]);
-  const [galleryErrors, setGalleryErrors] = useState([]);
-
-  const uploadFile = async (file) => {
-    const ext = file.name.split(".").pop();
-    const fileName = `${crypto.randomUUID()}.${ext}`;
-    const filePath = `products/${fileName}`;
-
-    const { error } = await supabase.storage
-      .from("product-images")
-      .upload(filePath, file);
-
-    if (error) throw error;
-    return filePath;
-  };
-
-  /*
-   * End of Gallery Image handling
-   */
 
   // fetch categories
   const fetchCategories = async () => {
@@ -190,7 +205,6 @@ export default function CreateProduct() {
       console.error("Error fetching categories:", error.message);
       return [];
     }
-
     return data;
   };
 
@@ -239,7 +253,7 @@ export default function CreateProduct() {
                         <FieldLabel htmlFor="product_description">
                           Product Description
                         </FieldLabel>
-                        <Input
+                        <Textarea
                           id="product_description"
                           {...register("product_description")}
                         />
@@ -295,7 +309,6 @@ export default function CreateProduct() {
                         )}
                       </Field>
 
-                      {/* <AddCategory /> */}
                       <AddCategory
                         categories={categories}
                         setCategories={setCategories}
@@ -309,49 +322,61 @@ export default function CreateProduct() {
                         }}
                         error={errors.category_id}
                       />
-
                       <input
                         type="hidden"
                         {...register("category_id")}
                         id="category_id"
                       />
+
+                      <FieldLabel
+                        htmlFor="is_featured"
+                        className="cursor-pointer"
+                      >
+                        <Field orientation="horizontal">
+                          <FieldContent>
+                            <FieldTitle className="text-base font-semibold">
+                              Featured Product
+                            </FieldTitle>
+                            <FieldDescription>
+                              Show this item on the homepage.
+                            </FieldDescription>
+                          </FieldContent>
+                          <Switch
+                            id="is_featured"
+                            checked={watch("is_featured") || false}
+                            onCheckedChange={(checked) =>
+                              setValue("is_featured", checked, {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              })
+                            }
+                          />
+                        </Field>
+                      </FieldLabel>
                     </FieldGroup>
 
                     <FieldGroup>
-                      {/* Thumbnail */}
+                      {/* Thumbnail Image — Binigyan ng key para mareset */}
                       <Field>
                         <FieldLabel>Product Image (Thumbnail)</FieldLabel>
                         <Input
+                          key={`thumb-${formKey}`}
                           type="file"
                           accept="image/*"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-
-                            // reset
                             setImageError(null);
-
-                            // validate existence
-                            if (!file) {
-                              setImageError("Product image is required.");
-                              setImageFile(null);
-                              return;
-                            }
-
-                            // validate type
                             if (!file.type.startsWith("image/")) {
                               setImageError(
                                 "Please select a valid image file.",
                               );
                               return;
                             }
-
-                            // validate size
                             if (file.size > MAX_FILE_SIZE) {
                               setImageError("Image must be 5MB or smaller.");
                               return;
                             }
-
                             setImageFile(file);
                           }}
                         />
@@ -363,7 +388,6 @@ export default function CreateProduct() {
                             {imageError}
                           </p>
                         )}
-
                         {previewUrl && !imageError && (
                           <img
                             src={previewUrl}
@@ -373,21 +397,20 @@ export default function CreateProduct() {
                         )}
                       </Field>
 
-                      {/* Gallery: upto 4 images */}
+                      {/* Gallery Images — Binigyan din ng key para mareset */}
                       <Field>
                         <FieldLabel>Gallery Images</FieldLabel>
-
                         <Input
+                          key={`gallery-${formKey}`}
                           type="file"
                           accept="image/*"
                           multiple
                           onChange={(e) => {
                             const files = Array.from(e.target.files ?? []);
-
                             const validFiles = [];
                             const errors = [];
 
-                            files.slice(0, 4).forEach((file, i) => {
+                            files.slice(0, 4).forEach((file) => {
                               if (!file.type.startsWith("image/")) {
                                 errors.push(
                                   `File ${file.name} is not a valid image.`,
@@ -402,7 +425,6 @@ export default function CreateProduct() {
                             setGalleryFiles(validFiles);
                             setGalleryErrors(errors);
 
-                            // generate previews
                             const previews = validFiles.map((file) =>
                               URL.createObjectURL(file),
                             );
@@ -412,7 +434,6 @@ export default function CreateProduct() {
                         <FieldDescription>
                           Upload up to 4 images (max 5MB each).
                         </FieldDescription>
-
                         {galleryErrors.length > 0 && (
                           <div className="mt-1 text-sm text-red-500">
                             {galleryErrors.map((err, i) => (
@@ -420,7 +441,6 @@ export default function CreateProduct() {
                             ))}
                           </div>
                         )}
-
                         <div className="mt-2 flex flex-wrap gap-2">
                           {galleryPreviews.map((src, i) => (
                             <img
@@ -438,7 +458,7 @@ export default function CreateProduct() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="ml-auto cursor-pointer mt-5"
+                    className="mt-5 ml-auto cursor-pointer"
                   >
                     {isSubmitting ? "Submitting..." : "Submit"}
                   </Button>
