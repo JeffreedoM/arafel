@@ -49,21 +49,19 @@ export default function Home() {
   // 3. Fetch Top 4 Highlighted/Featured Products
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
-      setLoading(true);
-
       const { data, error } = await supabase
         .from("products")
         .select(
           `
-        id,
-        product_name,
-        price,
-        is_featured,
-        product_images (
-          image_url,
-          is_thumbnail
-        )
-      `,
+          id,
+          product_name,
+          price,
+          is_featured,
+          product_images (
+            image_url,
+            is_thumbnail
+          )
+        `,
         )
         .eq("is_featured", true)
         .limit(4);
@@ -71,38 +69,21 @@ export default function Home() {
       if (error) {
         console.error("Error fetching featured products:", error);
       } else {
-        // I-map para makuha ang tamang thumbnail at i-transform ang relative path gamit ang Supabase Storage
+        // I-map para makuha ang tamang thumbnail image o fallback layout
         const formattedProducts = data.map((product) => {
-          // 1. Hanapin ang image na minarkahang thumbnail, o gamitin ang unang image bilang fallback
           const thumbnail =
             product.product_images?.find((img) => img.is_thumbnail) ||
             product.product_images?.[0];
-
-          let finalImageUrl = "https://picsum.photos/260"; // Default fallback kapag walang image talaga
-
-          if (thumbnail && thumbnail.image_url) {
-            // 2. Check kung absolute URL na ang naka-save (for backward compatibility)
-            if (thumbnail.image_url.startsWith("http")) {
-              finalImageUrl = thumbnail.image_url;
-            } else {
-              // 3. Kung relative path (e.g., 'products/uuid.jpg'), kunin ang public URL mula sa 'product-images' bucket
-              const { data: storageData } = supabase.storage
-                .from("product-images")
-                .getPublicUrl(thumbnail.image_url);
-
-              finalImageUrl = storageData?.publicUrl || finalImageUrl;
-            }
-          }
-
           return {
             ...product,
-            image: finalImageUrl,
+            image: thumbnail
+              ? thumbnail.image_url
+              : "https://picsum.photos/260",
           };
         });
-
         setFeaturedProducts(formattedProducts);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchFeaturedProducts();
@@ -133,8 +114,8 @@ export default function Home() {
     : heroData?.hero_button_link || "/shop";
 
   return (
-    <div className="bg-background flex min-h-screen flex-col justify-between">
-      <div className="wrapper-home">
+    <div className="bg-background wrapper-home flex min-h-screen flex-col justify-between">
+      <div>
         <Header />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -277,7 +258,7 @@ export default function Home() {
                 Latest Update From Our Feed
               </p>
               <span className="mb-4 text-sm font-semibold text-gray-700">
-                👍 Arafel's Gift Shop
+                👍 VP Dental Studio & Flower Arrangements
               </span>
               <a
                 href="https://facebook.com" // Palitan ng totoong Facebook Page link mo
