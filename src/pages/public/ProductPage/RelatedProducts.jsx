@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router"; // Clean client-side routing
 import { supabase } from "@/lib/supabase-client";
 
 function RelatedProducts({ currentProductId, categoryId }) {
@@ -7,13 +8,12 @@ function RelatedProducts({ currentProductId, categoryId }) {
 
   useEffect(() => {
     async function fetchRelated() {
-      // Siguraduhing may valid IDs bago mag-fetch ng data
       if (!currentProductId || !categoryId) return;
 
       try {
         setLoading(true);
 
-        // Supabase Query: Kumukuha ng kaparehong kategorya pero iniiwasan ang current product
+        // Supabase Query: Pull data from the products table
         const { data, error } = await supabase
           .from("products")
           .select(
@@ -27,12 +27,37 @@ function RelatedProducts({ currentProductId, categoryId }) {
             )
           `,
           )
-          .eq("category_id", categoryId) // Salain ang parehong kategorya [cite: 19, 50]
-          .neq("id", currentProductId) // I-exclude ang tinitingnang produkto [cite: 50]
-          .limit(4); // Saktong 4 items para sa isang malinis na row [cite: 30, 50]
+          .eq("category_id", categoryId)
+          .neq("id", currentProductId)
+          .limit(4);
 
         if (error) throw error;
-        setRelatedItems(data || []);
+
+        // Map through items to dynamically reconstruct bucket storage URLs
+        const itemsWithPublicUrls = (data || []).map((item) => {
+          // Identify raw image asset text pointer
+          const rawImg =
+            item.product_images?.find((img) => img.is_thumbnail) ||
+            item.product_images?.[0];
+
+          let fallbackOrPublicUrl = "https://via.placeholder.com/300";
+
+          if (rawImg?.image_url) {
+            // Fetch authentic public URL straight from your bucket
+            const { data: urlData } = supabase.storage
+              .from("product-images")
+              .getPublicUrl(rawImg.image_url);
+
+            fallbackOrPublicUrl = urlData.publicUrl;
+          }
+
+          return {
+            ...item,
+            resolvedThumbnail: fallbackOrPublicUrl,
+          };
+        });
+
+        setRelatedItems(itemsWithPublicUrls);
       } catch (error) {
         console.error("Error loading related products:", error.message);
       } finally {
@@ -43,72 +68,66 @@ function RelatedProducts({ currentProductId, categoryId }) {
     fetchRelated();
   }, [currentProductId, categoryId]);
 
-  // Loading State
   if (loading) {
     return (
-      <div class="py-8 text-center text-gray-500">
+      <div className="animate-pulse py-12 text-center text-sm font-medium text-neutral-400">
         Loading recommendations...
       </div>
     );
   }
 
-  // Huwag itong i-render sa UI kung walang ibang produkto sa kategoryang iyon
   if (relatedItems.length === 0) return null;
 
   return (
-    <div class="mt-12 w-full">
-      <hr class="my-8 border-gray-200" />
-      <h3 class="mb-6 text-xl font-bold text-gray-900">You May Also Like</h3>
+    <div className="mt-16 w-full">
+      <h3 className="mb-8 text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+        You May Also Like
+      </h3>
 
-      {/* Responsive Grid System: 1 column sa mobile, 2 sa tablet, 4 sa desktop */}
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
-        {relatedItems.map((item) => {
-          // Kunin ang imaheng naka-set bilang thumbnail, o ang unang imahe, o fallback placeholder
-          const thumbnail =
-            item.product_images?.find((img) => img.is_thumbnail)?.image_url ||
-            item.product_images?.[0]?.image_url ||
-            "https://via.placeholder.com/300";
-
-          return (
-            <div
-              key={item.id}
-              class="flex flex-col justify-between overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition duration-200 hover:shadow-md"
-            >
-              <div>
-                {/* Product Thumbnail container */}
-                <div class="h-48 overflow-hidden bg-gray-100">
-                  <img
-                    src={thumbnail}
-                    alt={item.product_name}
-                    class="h-full w-full object-cover transition duration-300 hover:scale-105"
-                  />
-                </div>
-
-                {/* Text Information */}
-                <div class="p-4">
-                  {/* Ginamit ang line-clamp-1 para manatiling pantay ang taas ng card kahit mahaba ang pangalan */}
-                  <h4 class="line-clamp-1 text-base font-semibold text-gray-800">
-                    {item.product_name}
-                  </h4>
-                  {/* Pag-format ng presyo na laging may dalawang decimal places gaya ng hiningi sa thesis rules */}
-                  <p class="mt-1 font-bold text-indigo-600">
-                    ₱{Number(item.price).toFixed(2)}
-                  </p>
-                </div>
+      {/* Modern Responsive Card Grid Layout */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
+        {relatedItems.map((item) => (
+          <div
+            key={item.id}
+            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
+          >
+            <div>
+              {/* Product Thumbnail Container */}
+              <div className="relative aspect-square overflow-hidden bg-neutral-100 p-3 dark:bg-neutral-950">
+                <img
+                  src={item.resolvedThumbnail}
+                  alt={item.product_name}
+                  className="h-full w-full object-contain transition duration-300 group-hover:scale-103"
+                  loading="lazy"
+                />
               </div>
 
-              {/* Action Button */}
-              <div class="p-4 pt-0">
-                <a
-                  href={`/product/${item.id}`} // Palitan ito ng <Link to=...> kung gumagamit ka ng react-router-dom
-                  class="block w-full rounded border border-indigo-100 bg-gray-50 px-4 py-2 text-center text-sm font-medium text-indigo-600 transition hover:bg-indigo-50"
-                >
-                  View Product
-                </a>
+              {/* Text Information */}
+              <div className="p-5">
+                <h4 className="line-clamp-1 text-base font-semibold text-neutral-800 dark:text-neutral-200">
+                  {item.product_name}
+                </h4>
+                <p className="mt-1.5 font-extrabold text-neutral-950 dark:text-neutral-50">
+                  ₱
+                  {Number(item.price || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
               </div>
             </div>
-          );
-        })}
+
+            {/* Premium Interactive Action Button */}
+            <div className="p-5 pt-0">
+              <Link
+                to={`/product/${item.id}`}
+                className="block w-full rounded-xl border border-neutral-200 bg-neutral-50/50 py-2.5 text-center text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                View Details
+              </Link>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
