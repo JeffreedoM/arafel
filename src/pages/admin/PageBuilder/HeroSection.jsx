@@ -1,5 +1,11 @@
-import { SiteHeader } from "@/components/site-header";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { supabase } from "@/lib/supabase-client.js";
+
+// shadcn & radix components
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Field,
   FieldDescription,
@@ -11,25 +17,37 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import * as Accordion from "@radix-ui/react-accordion";
-import { ChevronDown } from "lucide-react";
 
-import { supabase } from "@/lib/supabase-client.js";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+// icons
+import {
+  ChevronDown,
+  LayoutTemplate,
+  UploadCloud,
+  Image as ImageIcon,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 
 export default function HeroSection() {
   const [loading, setLoading] = useState(true);
   const [heroImageUrl, setHeroImageUrl] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [campaigns, setCampaigns] = useState([]);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
 
-  const { register, handleSubmit, reset, watch, setValue } = useForm({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { isSubmitting },
+  } = useForm({
     defaultValues: {
       hero_title: "",
       hero_description: "",
@@ -40,58 +58,59 @@ export default function HeroSection() {
 
   const watchedFile = watch("hero_image_file");
 
-  // fetch hero data from Supabase
-  const fetchHeroData = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("pages")
-      .select("*")
-      .eq("slug", "home")
-      .single();
-
-    if (error) {
-      console.error(error);
-    } else if (data) {
-      reset({
-        hero_title: data.hero_title || "",
-        hero_description: data.hero_description || "",
-        hero_image_file: null,
-        campaign_id: data.campaign_id ? String(data.campaign_id) : "",
-      });
-      setHeroImageUrl(data.hero_image_url || null);
-    }
-    setLoading(false);
-  };
-
+  // Track dynamic image changes cleanly & prevent memory leaks
   useEffect(() => {
-    fetchHeroData();
-  }, []);
-
-  //fetch campaigns for dropdown
-  const [campaigns, setCampaigns] = useState([]);
-
-  const fetchCampaigns = async () => {
-    const { data, error } = await supabase
-      .from("campaigns")
-      .select("id, campaign_name");
-    if (error) {
-      console.error("Error fetching campaigns:", error);
+    if (watchedFile?.[0]) {
+      const objectUrl = URL.createObjectURL(watchedFile[0]);
+      setPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
     } else {
-      setCampaigns(data);
+      setPreviewUrl(null);
     }
-  };
+  }, [watchedFile]);
+
+  // Fetch initial setup data
   useEffect(() => {
-    fetchCampaigns();
-  }, []);
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [pagesRes, campaignsRes] = await Promise.all([
+          supabase.from("pages").select("*").eq("slug", "home").maybeSingle(),
+          supabase
+            .from("campaigns")
+            .select("id, campaign_name")
+            .order("campaign_name"),
+        ]);
+
+        if (campaignsRes.data) setCampaigns(campaignsRes.data);
+
+        if (pagesRes.data) {
+          reset({
+            hero_title: pagesRes.data.hero_title || "",
+            hero_description: pagesRes.data.hero_description || "",
+            hero_image_file: null,
+            campaign_id: pagesRes.data.campaign_id
+              ? String(pagesRes.data.campaign_id)
+              : "",
+          });
+          setHeroImageUrl(pagesRes.data.hero_image_url || null);
+        }
+      } catch (err) {
+        console.error("Data loading failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [reset]);
 
   const uploadImage = async (file) => {
     if (!file) return null;
-
     const fileExt = file.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `page-images/${fileName}`;
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("product-images")
       .upload(filePath, file, { upsert: true });
 
@@ -100,132 +119,219 @@ export default function HeroSection() {
       return null;
     }
 
-    // get public URL properly
     const { data: urlData } = supabase.storage
       .from("product-images")
       .getPublicUrl(filePath);
 
-    return urlData.publicUrl; // THIS is the actual URL you want
+    return urlData?.publicUrl || null;
   };
 
   const onSubmit = async (formData) => {
-    let imageUrl = heroImageUrl; // current DB value
+    setStatusMessage(null);
+    let imageUrl = heroImageUrl;
 
-    console.log("Form Data:", formData);
-    // upload new file if selected
     if (formData.hero_image_file?.[0]) {
       const uploadedUrl = await uploadImage(formData.hero_image_file[0]);
-      console.log("Uploaded Image URL:", uploadedUrl); // this is undefined
       if (uploadedUrl) imageUrl = uploadedUrl;
     }
 
-    console.log("imageUrl", imageUrl);
-
-    // update DB
     const { error } = await supabase
       .from("pages")
       .update({
         hero_title: formData.hero_title,
         hero_description: formData.hero_description,
-        hero_image_url: imageUrl, // <-- must pass the actual URL
+        hero_image_url: imageUrl,
         campaign_id: formData.campaign_id ? Number(formData.campaign_id) : null,
       })
       .eq("slug", "home");
 
     if (error) {
       console.error(error);
-      alert("Failed to update hero section");
+      setStatusMessage({
+        type: "error",
+        text: "Failed to update hero section settings.",
+      });
     } else {
-      alert("Hero section updated!");
-      setHeroImageUrl(imageUrl); // update state for preview
+      setHeroImageUrl(imageUrl);
+      setValue("hero_image_file", null); // Clear file selection on successful update
+      setStatusMessage({
+        type: "success",
+        text: "Hero section configuration updated successfully!",
+      });
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
+        <Loader2 className="text-primary h-4 w-4 animate-spin" />
+        Loading section preferences...
+      </div>
+    );
+  }
 
   return (
     <Accordion.Root
-      className="max-w-4xl"
+      className="w-full max-w-4xl"
       type="single"
       collapsible
       defaultValue="hero-section"
     >
-      <Accordion.Item value="hero-section" className="rounded-md">
-        <div className="bg-accent flex items-center justify-between px-6 py-3">
-          <h2 className="text-lg font-semibold">Main Banner (Top of Page)</h2>
-          <Accordion.Trigger className="cursor-pointer transition-transform duration-300 data-[state=open]:rotate-180">
-            <ChevronDown className="transform" aria-hidden />
-          </Accordion.Trigger>
-        </div>
-        <Accordion.Content>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
-            <FieldGroup className="max-w-xl px-6 pt-4 pb-10">
-              <Field>
-                <FieldLabel htmlFor="hero_title">Title</FieldLabel>
+      <Accordion.Item
+        value="hero-section"
+        className="bg-card text-card-foreground overflow-hidden rounded-xl border shadow-sm"
+      >
+        {/* Accordion Header */}
+        <Accordion.Trigger className="bg-muted/30 hover:bg-muted/50 group flex w-full items-center justify-between border-b px-6 py-4 text-left transition-all">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 text-primary rounded-lg p-2">
+              <LayoutTemplate className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="mb-1 text-sm leading-none font-semibold">
+                Main Banner
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                Hero layout sitting above-the-fold on the home screen.
+              </p>
+            </div>
+          </div>
+          <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0 transition-transform duration-300 group-data-[state=open]:rotate-180" />
+        </Accordion.Trigger>
+
+        {/* Accordion Content Panel */}
+        <Accordion.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
+            {statusMessage && (
+              <div
+                className={`flex items-start gap-3 rounded-lg border p-4 text-sm ${
+                  statusMessage.type === "success"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "bg-destructive/10 border-destructive/20 text-destructive"
+                }`}
+              >
+                {statusMessage.type === "success" ? (
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                ) : (
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                )}
+                <p className="font-medium">{statusMessage.text}</p>
+              </div>
+            )}
+
+            <FieldGroup className="grid max-w-2xl gap-6">
+              {/* Title Field */}
+              <Field className="space-y-1.5">
+                <FieldLabel
+                  htmlFor="hero_title"
+                  className="text-muted-foreground text-xs font-bold tracking-wide uppercase"
+                >
+                  Display Header Title
+                </FieldLabel>
                 <Input
                   id="hero_title"
                   {...register("hero_title")}
-                  placeholder="Enter hero title"
+                  placeholder="e.g., Discover Our New Summer Collection"
+                  className="h-10 shadow-sm"
                 />
-                <FieldDescription>Title of the banner.</FieldDescription>
+                <FieldDescription className="text-muted-foreground text-xs">
+                  Main bold statement text displayed on the header element.
+                </FieldDescription>
               </Field>
 
-              <Field>
-                <FieldLabel htmlFor="hero_description">
-                  Description / Tagline
+              {/* Description Field */}
+              <Field className="space-y-1.5">
+                <FieldLabel
+                  htmlFor="hero_description"
+                  className="text-muted-foreground text-xs font-bold tracking-wide uppercase"
+                >
+                  Subheading Description
                 </FieldLabel>
                 <Textarea
                   id="hero_description"
                   {...register("hero_description")}
-                  placeholder="Enter page description or tagline"
+                  placeholder="Describe details regarding collections, announcements or general summaries..."
+                  className="min-h-[100px] resize-none shadow-sm"
                 />
-                <FieldDescription>
-                  Description or tagline for the banner.
+                <FieldDescription className="text-muted-foreground text-xs">
+                  Catchy supporting contextual lines displayed underneath the
+                  title header text.
                 </FieldDescription>
               </Field>
 
-              <Field>
-                <FieldLabel htmlFor="hero_image_file">Image</FieldLabel>
-                {heroImageUrl && !watchedFile && (
-                  <div className="bg-muted mb-2 rounded-md p-2">
-                    <img
-                      src={heroImageUrl}
-                      alt="Current Hero"
-                      className="max-h-40 w-full object-contain"
-                    />
+              {/* Advanced Integrated Image Upload and Preview Block */}
+              <Field className="space-y-1.5">
+                <FieldLabel className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
+                  Graphic Hero Asset
+                </FieldLabel>
+
+                <div className="grid items-start gap-4 pt-1 sm:grid-cols-2">
+                  {/* Image Display Window */}
+                  <div className="bg-muted/40 group/img relative flex aspect-video items-center justify-center overflow-hidden rounded-lg border shadow-inner">
+                    {previewUrl || heroImageUrl ? (
+                      <img
+                        src={previewUrl || heroImageUrl}
+                        alt="Hero presentation layout"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-muted-foreground space-y-1 p-4 text-center">
+                        <ImageIcon className="mx-auto h-8 w-8 stroke-[1.5] opacity-60" />
+                        <p className="text-xs">No active asset found</p>
+                      </div>
+                    )}
+                    {(previewUrl || heroImageUrl) && (
+                      <div className="absolute inset-x-0 bottom-0 bg-black/60 px-3 py-1.5 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/img:opacity-100">
+                        {previewUrl
+                          ? "✨ Unsaved change preview"
+                          : "📁 Currently stored resource"}
+                      </div>
+                    )}
                   </div>
-                )}
-                <Input
-                  type="file"
-                  id="hero_image_file"
-                  {...register("hero_image_file")}
-                  accept="image/*"
-                />
-                {watchedFile?.[0] && (
-                  <div className="bg-muted mt-2 rounded-md p-2">
-                    <img
-                      src={URL.createObjectURL(watchedFile[0])}
-                      alt="New Hero"
-                      className="max-h-40 w-full object-contain"
+
+                  {/* Clean Dropzone Upload Mask */}
+                  <label
+                    htmlFor="hero_image_file"
+                    className="hover:bg-muted/40 group flex h-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 text-center transition-colors"
+                  >
+                    <UploadCloud className="text-muted-foreground group-hover:text-primary mb-2 h-7 w-7 stroke-[1.5] transition-colors" />
+                    <span className="text-foreground mb-0.5 block text-xs font-semibold">
+                      Click to replace graphics
+                    </span>
+                    <span className="text-muted-foreground block text-[11px]">
+                      Supports transparent WebP, PNG, JPEG formats
+                    </span>
+                    <input
+                      type="file"
+                      id="hero_image_file"
+                      {...register("hero_image_file")}
+                      accept="image/*"
+                      className="hidden"
                     />
-                  </div>
-                )}
-                <FieldDescription>
-                  Upload a new hero image (leave empty to keep current)
-                </FieldDescription>
+                  </label>
+                </div>
               </Field>
 
-              <Field>
-                <FieldLabel>Campaign</FieldLabel>
+              {/* Linked Campaign Field Dropdown Selector */}
+              <Field className="space-y-1.5">
+                <FieldLabel className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
+                  Click Destination Linkage
+                </FieldLabel>
                 <Select
-                  value={watch("campaign_id")?.toString()}
+                  // Kung walang campaign_id o empty string ang nasa database, default natin sa "none"
+                  value={watch("campaign_id")?.toString() || "none"}
                   onValueChange={(value) => setValue("campaign_id", value)}
                 >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select Campaign" />
+                  <SelectTrigger className="h-10 w-full shadow-sm sm:w-[280px]">
+                    <SelectValue placeholder="Select active marketing campaign" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
+                      {/* 💥 FIX: Ginawa nating "none" ang value sa halip na "" */}
+                      <SelectItem value="none">
+                        None (Static Non-clickable Banner)
+                      </SelectItem>
+
                       {campaigns.map((campaign) => (
                         <SelectItem
                           key={campaign.id}
@@ -237,14 +343,30 @@ export default function HeroSection() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <FieldDescription>
-                  Link the hero banner to a campaign page.
+                <FieldDescription className="text-muted-foreground text-xs">
+                  Maps visitors clicking hero elements straight to specific deal
+                  campaign modules.
                 </FieldDescription>
               </Field>
             </FieldGroup>
-            <Button type="submit" className="mt-4 ml-auto" disabled={uploading}>
-              {uploading ? "Uploading..." : "Save Hero Section"}
-            </Button>
+
+            {/* Form Actions Section */}
+            <div className="flex items-center justify-end gap-3 border-t pt-4">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="min-w-[140px] shadow-sm"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving Changes
+                  </>
+                ) : (
+                  "Save Hero Section"
+                )}
+              </Button>
+            </div>
           </form>
         </Accordion.Content>
       </Accordion.Item>

@@ -127,12 +127,17 @@ const data = {
   transactions: [
     {
       title: "Sales Register (Cashier)",
-      url: "/admin/transactions/orders",
+      url: "/admin/transactions/sales-register",
       icon: IconCashRegister,
     },
     {
       title: "Sales History",
       url: "/admin/transactions/sales-history",
+      icon: IconReport,
+    },
+    {
+      title: "Orders",
+      url: "/admin/transactions/orders",
       icon: IconReport,
     },
   ],

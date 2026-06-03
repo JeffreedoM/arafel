@@ -104,7 +104,7 @@ export default function SalesHistory() {
 
   useEffect(() => {
     fetchSalesHistory();
-  }, []);
+  }, []); 
 
   // Filter conditions mapping
   const filteredSales = sales.filter((sale) => {

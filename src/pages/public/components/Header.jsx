@@ -2,10 +2,22 @@ import { Menu, ShoppingCart, X, Search } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import { supabase } from "@/lib/supabase-client";
+import { useCart } from "@/hooks/useCart"; // 1. In-import ang cart custom hook
+import Cart from "../Cart/Cart"; // 2. In-import ang Cart overlay drawer component
 
 export default function Header() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
   const [toggleBurgerMenu, setToggleBurgerMenu] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false); // State para sa pagbukas/pagsara ng cart
+
+  // Kunin ang cart items galing sa global context
+  const { cartItems } = useCart();
+
+  // Kwentahin ang kabuuang bilang ng mga items (e.g., kung 2x Item A + 1x Item B = 3 items total)
+  const totalCartCount = cartItems.reduce(
+    (acc, item) => acc + item.quantity,
+    0,
+  );
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,7 +26,7 @@ export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const navigate = useNavigate();
-  const dropdownRef = useRef(null); // Para ma-detect kung nag-click sa labas ng dropdown
+  const dropdownRef = useRef(null);
 
   // Handle screen resize
   useEffect(() => {
@@ -23,9 +35,8 @@ export default function Header() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // DEBOUNCE LOGIC: Ito ang gumagawa ng interval/delay para hindi mabigat sa fetching
+  // DEBOUNCE LOGIC
   useEffect(() => {
-    // Kung walang laman ang search input, linisin ang dropdown at huwag mag-fetch
     if (searchQuery.trim() === "") {
       setSuggestions([]);
       setIsSearching(false);
@@ -34,14 +45,13 @@ export default function Header() {
 
     setIsSearching(true);
 
-    // Mag-antay ng 500ms matapos tumigil sa pag-type ang user bago tumakbo ang code sa loob
     const delayDebounceFn = setTimeout(async () => {
       try {
         const { data, error } = await supabase
           .from("products")
           .select("id, product_name, price")
           .ilike("product_name", `%${searchQuery.trim()}%`)
-          .limit(5); // Limitahan sa 5 items lang para malinis tingnan ang dropdown
+          .limit(5);
 
         if (error) throw error;
         setSuggestions(data || []);
@@ -50,13 +60,12 @@ export default function Header() {
       } finally {
         setIsSearching(false);
       }
-    }, 500); // 500ms delay interval
+    }, 500);
 
-    // Linisin ang timer kapag nag-type uli ang user bago matapos ang kalahating segundo
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Isara ang dropdown kapag nag-click ang user sa labas ng search bar
+  // Isara ang dropdown kapag nag-click sa labas
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -67,7 +76,6 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Kapag pinindot ang 'Enter' key o i-click ang search icon
   const triggerFullSearch = () => {
     setShowDropdown(false);
     if (searchQuery.trim() !== "") {
@@ -85,12 +93,15 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-background sticky top-0 z-20 flex h-[80px] items-center justify-between gap-x-16 border-b border-gray-100 px-4 py-2">
-        <Link to="/" className="text-primary text-lg font-bold lg:text-xl">
+      <header className="bg-background sticky top-0 z-20 flex h-[80px] items-center justify-between gap-x-6 border-b border-gray-100 px-4 py-2 lg:gap-x-16">
+        <Link
+          to="/"
+          className="text-primary flex-shrink-0 text-lg font-bold lg:text-xl"
+        >
           Arafel's Gift Shop
         </Link>
 
-        {/* For Desktop */}
+        {/* For Desktop Layout */}
         {!isMobile && (
           <ul className="flex flex-grow items-center space-x-5 text-sm font-semibold lg:space-x-10 xl:space-x-14">
             {/* SEARCH COMPONENT CONTAINER */}
@@ -118,21 +129,18 @@ export default function Header() {
               {/* DROPDOWN MATCHES LIST */}
               {showDropdown && searchQuery.trim() !== "" && (
                 <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white text-left font-normal shadow-lg">
-                  {/* Loading State habang naghihintay ng interval */}
                   {isSearching && (
                     <div className="animate-pulse p-3 text-sm text-gray-500 italic">
                       Searching for matches...
                     </div>
                   )}
 
-                  {/* Kapag tapos na mag-load at walang nakitang match */}
                   {!isSearching && suggestions.length === 0 && (
                     <div className="p-3 text-sm text-gray-500">
                       No matches found for "{searchQuery}"
                     </div>
                   )}
 
-                  {/* Listahan ng mga nahanap na produkto */}
                   {!isSearching && suggestions.length > 0 && (
                     <div className="flex flex-col">
                       <div className="bg-gray-50 px-3 py-1 text-xs font-semibold tracking-wider text-gray-400 uppercase">
@@ -154,7 +162,6 @@ export default function Header() {
                         </Link>
                       ))}
 
-                      {/* View All Results Trigger */}
                       <button
                         onClick={triggerFullSearch}
                         className="w-full bg-indigo-50/50 py-2 text-center text-xs font-semibold text-indigo-600 transition hover:bg-indigo-50"
@@ -177,17 +184,48 @@ export default function Header() {
                 Categories
               </Link>
             </li>
+
+            {/* 3. DESKTOP CART ACCESSIBLE TRIGGER ICON */}
+            <li>
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="relative p-2 text-gray-700 transition hover:text-indigo-600"
+              >
+                <ShoppingCart size={22} />
+                {totalCartCount > 0 && (
+                  <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-md ring-2 ring-white">
+                    {totalCartCount}
+                  </span>
+                )}
+              </button>
+            </li>
           </ul>
         )}
 
-        {/* For Mobile */}
+        {/* For Mobile Layout Header Right Control */}
         {isMobile && (
-          <button
-            className="z-30 cursor-pointer p-2"
-            onClick={() => setToggleBurgerMenu(!toggleBurgerMenu)}
-          >
-            {toggleBurgerMenu ? <X /> : <Menu size={24} />}
-          </button>
+          <div className="z-30 flex items-center gap-x-2">
+            {/* MOBILE CART ACCESSIBLE TRIGGER ICON */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 text-gray-700 transition hover:text-indigo-600"
+            >
+              <ShoppingCart size={22} />
+              {totalCartCount > 0 && (
+                <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-md ring-2 ring-white">
+                  {totalCartCount}
+                </span>
+              )}
+            </button>
+
+            {/* Mobile Burger Menu Button */}
+            <button
+              className="cursor-pointer p-2 text-gray-700"
+              onClick={() => setToggleBurgerMenu(!toggleBurgerMenu)}
+            >
+              {toggleBurgerMenu ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         )}
       </header>
 
@@ -214,10 +252,28 @@ export default function Header() {
               Products
             </Link>
           </div>
-          <div>Categories</div>
-          <div>Cart</div>
+          <div>
+            <Link to="/categories" onClick={() => setToggleBurgerMenu(false)}>
+              Categories
+            </Link>
+          </div>
+          {/* Mobile Overlay Cart Text Link Option */}
+          <div>
+            <button
+              onClick={() => {
+                setToggleBurgerMenu(false); // Isara ang mobile menu
+                setIsCartOpen(true); // Buksan ang slide panel cart
+              }}
+              className="flex items-center gap-2"
+            >
+              Cart ({totalCartCount})
+            </button>
+          </div>
         </div>
       )}
+
+      {/* 4. CART OVERLAY PANEL - Magbubukas kahit saang page ka mag-click sa Header */}
+      <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );
 }
