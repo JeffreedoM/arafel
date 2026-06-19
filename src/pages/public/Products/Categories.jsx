@@ -60,7 +60,7 @@ function Categories() {
 
   return (
     <>
-      <div className="wrapper-categories bg-background min-h-screen">
+      <div className="wrapper bg-background min-h-screen">
         <Header />
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="mb-10 text-center md:text-left">

@@ -184,6 +184,11 @@ export default function Header() {
                 Categories
               </Link>
             </li>
+            {/* <li>
+              <Link to="/gift-finder" className="hover:text-indigo-600">
+                Find a Gift
+              </Link>
+            </li> */}
 
             {/* 3. DESKTOP CART ACCESSIBLE TRIGGER ICON */}
             <li>

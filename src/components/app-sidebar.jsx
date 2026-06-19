@@ -53,11 +53,11 @@ const data = {
     //   url: "/products",
     //   icon: IconBox,
     // },
-    {
-      title: "Page Builder",
-      url: "/admin/page-builder",
-      icon: IconListDetails,
-    },
+    // {
+    //   title: "Page Builder",
+    //   url: "/admin/page-builder",
+    //   icon: IconListDetails,
+    // },
     // {
     //   title: "Team",
     //   url: "#",

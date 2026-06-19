@@ -94,7 +94,7 @@ export default function ProductDetails() {
               {product.price && product.price >= 0 ? (
                 <p className="mt-2 text-5xl">₱ {product.price}</p>
               ) : (
-                <p className="text-xl italic text-muted-foreground">
+                <p className="text-muted-foreground text-xl italic">
                   {product.price_description || "Contact for price"}
                 </p>
               )}
@@ -105,8 +105,8 @@ export default function ProductDetails() {
                 {product.product_description}
               </p>
 
-              <div className="mt-auto flex gap-4 mb-10">
-                <Link to={`/products/${product.id}/edit`}>
+              <div className="mt-auto mb-10 flex gap-4">
+                <Link to={`edit`}>
                   <Button className="cursor-pointer">Edit Product</Button>
                 </Link>
                 <Button className="cursor-pointer" variant="destructive">

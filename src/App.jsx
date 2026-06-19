@@ -22,6 +22,7 @@ import CategoriesPage from "./pages/public/Products/Categories";
 import TransactionManager from "./pages/admin/TransactionManager/TransactionManager";
 import SalesHistory from "./pages/admin/TransactionManager/SalesHistory";
 import Orders from "./pages/admin/TransactionManager/Orders";
+import GiftFinderQuiz from "./pages/public/GiftRecommendations/GiftFinderQuiz";
 
 function App() {
   const { user, loading } = useAuth();
@@ -46,6 +47,7 @@ function App() {
       <Route path="/product/:id" element={<ProductPage />} />
       <Route path="/products" element={<ProductsPage />} />
       <Route path="/categories" element={<CategoriesPage />} />
+      {/* <Route path="/gift-finder" element={<GiftFinderQuiz />} /> */}
 
       {/* Protected dashboard */}
       <Route element={<ProtectedRoute />}>

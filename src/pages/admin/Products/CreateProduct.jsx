@@ -33,6 +33,7 @@ import {
   ArrowLeft,
   Loader2,
   Sparkles,
+  Tags,
 } from "lucide-react";
 import { Link } from "react-router";
 
@@ -53,6 +54,7 @@ export default function CreateProduct() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categories, setCategories] = useState([]);
   const [formKey, setFormKey] = useState(Date.now());
+  const [tagsInput, setTagsInput] = useState("");
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const [imageFile, setImageFile] = useState(null);
@@ -124,9 +126,23 @@ export default function CreateProduct() {
         return;
       }
 
+      // Convert comma-separated string to lowercase text array for Supabase text[] column
+      const tagsArray = tagsInput
+        ? tagsInput
+            .split(",")
+            .map((tag) => tag.trim().toLowerCase())
+            .filter((tag) => tag !== "")
+        : [];
+
+      // Combine form values with our structured tags array
+      const finalPayload = {
+        ...formData,
+        tags: tagsArray,
+      };
+
       const { data: newProduct, error: productError } = await supabase
         .from("products")
-        .insert([formData])
+        .insert([finalPayload])
         .select()
         .single();
 
@@ -164,6 +180,7 @@ export default function CreateProduct() {
       setGalleryPreviews([]);
       setGalleryErrors([]);
       setSelectedCategory(null);
+      setTagsInput("");
       setFormKey(Date.now());
     } catch (err) {
       console.error("Submit Error:", err);
@@ -345,6 +362,26 @@ export default function CreateProduct() {
                         </p>
                       )}
                     </Field>
+
+                    {/* Gift Quiz Tag Matching Fields */}
+                    {/* <Field>
+                      <div className="flex items-center gap-1.5">
+                        <Tags className="text-muted-foreground h-4 w-4" />
+                        <FieldLabel htmlFor="tags">
+                          Search Tags (Gift Finder Quiz)
+                        </FieldLabel>
+                      </div>
+                      <Input
+                        id="tags"
+                        placeholder="e.g. birthday, girlfriend, balloons, romantic, anniversary"
+                        value={tagsInput}
+                        onChange={(e) => setTagsInput(e.target.value)}
+                      />
+                      <FieldDescription className="text-xs">
+                        Separate values with commas. These tags allow the
+                        homepage gift quiz to seamlessly recommend this item.
+                      </FieldDescription>
+                    </Field> */}
                   </CardContent>
                 </Card>
 

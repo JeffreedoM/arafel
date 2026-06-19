@@ -15,11 +15,11 @@ function Products() {
     async function fetchAllProducts() {
       try {
         setLoading(true);
-        setError(null); // I-reset ang error state tuwing magpapakarga muli
+        setError(null);
 
         const searchParams = new URLSearchParams(location.search);
         const searchQuery = searchParams.get("search");
-        const categoryQuery = searchParams.get("category"); // Maaaring ID (e.g. "3") o Pangalan (e.g. "Men")
+        const categoryQuery = searchParams.get("category");
 
         // RELATION JOIN QUERY BASE
         let query = supabase.from("products").select(`
@@ -41,25 +41,20 @@ function Products() {
             )
           `);
 
-        // 1. DYNAMIC FILTER: Kung may search keyword
         if (searchQuery) {
           query = query.ilike("product_name", `%${searchQuery}%`);
         }
 
-        // 2. DYNAMIC FILTER FIX: Alamin kung Numero o Pangalan ang ipinasang Category filter
         if (categoryQuery) {
-          const isNumeric = /^\d+$/.test(categoryQuery); // Magbabalik ng true kung pulos numero (ID)
+          const isNumeric = /^\d+$/.test(categoryQuery);
 
           if (isNumeric) {
-            // Kung ID, ikumpara nang direkta sa category_id column (bigint)
             query = query.eq("category_id", parseInt(categoryQuery, 10));
           } else {
-            // SOLUSYON: Kung String (gaya ng "Men"), ikumpara sa loob ng relasyon (foreign table filter)
             query = query.eq("product_categories.category_name", categoryQuery);
           }
         }
 
-        // Patakbuhin ang query kasama ang ordering
         const { data: dbData, error: dbError } = await query.order(
           "created_at",
           { ascending: false },
@@ -67,24 +62,40 @@ function Products() {
 
         if (dbError) throw dbError;
 
-        // 3. DYNAMIC SETTING PARA SA HEADER TEXT
+        // --- FIXED DYNAMIC SETTING PARA SA HEADER TEXT ---
         if (categoryQuery) {
           const isNumeric = /^\d+$/.test(categoryQuery);
-          if (isNumeric && dbData && dbData.length > 0) {
-            // Kung numero ang pinasa ngunit may nakuha tayong data, kunin ang pangalan mula sa database relation
-            setCurrentCategoryName(
-              dbData[0].product_categories?.category_name ||
-                "Selected Category",
-            );
+
+          if (isNumeric) {
+            if (dbData && dbData.length > 0) {
+              // Kung may produkto, kunin ang pangalan sa unang produkto
+              setCurrentCategoryName(
+                dbData[0].product_categories?.category_name ||
+                  "Selected Category",
+              );
+            } else {
+              // FIX: Kung walang produkto, kuhanin nang hiwalay ang pangalan mula sa categories table gamit ang ID
+              const { data: catData, error: catError } = await supabase
+                .from("product_categories")
+                .select("category_name")
+                .eq("id", parseInt(categoryQuery, 10))
+                .single();
+
+              if (!catError && catData) {
+                setCurrentCategoryName(catData.category_name);
+              } else {
+                setCurrentCategoryName("Selected Category");
+              }
+            }
           } else {
-            // Kung string na ang ipinasa (e.g. "Men"), iyon na mismo ang gamiting pangalan sa header
+            // Kung text na ang pinasa (e.g. "Men"), iyon na agad ang gagamitin natin
             setCurrentCategoryName(categoryQuery);
           }
         } else {
           setCurrentCategoryName("");
         }
+        // -------------------------------------------------
 
-        // 4. Image mapping mula sa Supabase storage bucket
         const productsWithStorageUrls = (dbData || []).map((product) => {
           const targetImageObj =
             product.product_images?.find((img) => img.is_thumbnail) ||
@@ -108,7 +119,6 @@ function Products() {
           };
         });
 
-        // Opsyonal na dagdag-pagsala: Kung gumamit ng string category filter, siguraduhing hindi null ang sumunod na relasyon
         const filteredProducts =
           categoryQuery && !/^\d+$/.test(categoryQuery)
             ? productsWithStorageUrls.filter(

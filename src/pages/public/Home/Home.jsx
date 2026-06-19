@@ -130,7 +130,7 @@ export default function Home() {
   // Tukuyin ang dynamic link para sa CTA button ng Hero section
   const ctaLink = heroData?.campaign_id
     ? `/campaign/${heroData.campaign_id}`
-    : heroData?.hero_button_link || "/shop";
+    : heroData?.hero_button_link || "/products";
 
   return (
     <div className="bg-background flex min-h-screen flex-col justify-between">
@@ -185,7 +185,7 @@ export default function Home() {
 
                 return (
                   <Link
-                    to={`/shop?category=${category.id}`}
+                    to={`/products?category=${category.id}`}
                     key={category.id}
                     className={`flex min-w-[140px] grow items-center justify-center rounded-xl border p-4 text-center tracking-wide transition-all hover:-translate-y-1 hover:shadow-sm md:w-[200px] md:grow-0 ${colorStyle}`}
                   >
@@ -238,10 +238,10 @@ export default function Home() {
                         ₱{Number(product.price).toLocaleString()}
                       </span>
                       <Link
-                        to={`/customize/${product.id}`}
+                        to={`/product/${product.id}`}
                         className="hover:bg-primary hover:text-primary-foreground rounded-lg bg-stone-900 px-3 py-2 text-center text-xs font-bold text-stone-50 transition-colors"
                       >
-                        Customize
+                        View Details
                       </Link>
                     </div>
                   </div>
@@ -252,10 +252,10 @@ export default function Home() {
             {/* View More Button */}
             <div className="mt-12 text-center">
               <Link
-                to="/shop"
+                to="/products"
                 className="hover:border-primary hover:text-primary inline-flex items-center gap-2 rounded-xl border-2 border-gray-200 px-6 py-2.5 text-sm font-bold text-gray-600 transition-colors"
               >
-                View More Arrangements
+                View More ...
               </Link>
             </div>
           </section>

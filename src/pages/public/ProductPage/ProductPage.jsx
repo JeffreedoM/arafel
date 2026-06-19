@@ -128,7 +128,7 @@ export default function ProductPage() {
   const isOutOfStock = product.stock === undefined || product.stock <= 0;
 
   return (
-    <div className="min-h-screen bg-neutral-50/50 font-[inter] text-neutral-800 antialiased dark:bg-neutral-950 dark:text-neutral-50">
+    <div className="min-h-screen font-[inter] text-neutral-800 antialiased dark:bg-neutral-950 dark:text-neutral-50">
       <div className="wrapper-home">
         <Header />
 
